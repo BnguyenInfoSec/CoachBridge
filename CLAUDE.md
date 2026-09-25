@@ -18,6 +18,11 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
+To look at the app in the simulator without Health data or onboarding, pass defaults as launch
+arguments (they override stored values and aren't saved):
+`xcrun simctl launch <udid> <bundle-id> -demo.enabled YES -onboarding.completedVersion 3`.
+Use the simulator's UDID, not `booted`, when more than one is running.
+
 Xcode 27 ships no iPhone 16 Pro simulator; use any installed iPhone
 (`xcrun simctl list devices available`). `CODE_SIGNING_ALLOWED=NO` makes the device build a pure
 compile check, so it doesn't depend on the team in `Secrets.xcconfig`.
@@ -52,11 +57,15 @@ Do not add the WeatherKit entitlement on a free team — it breaks signing.
 
 ```
 Model/    pure value types and logic — no UI, no I/O, no Date.now. All unit-tested.
-Health/   HealthKit readers + DemoData
+Health/   HealthSource protocol, HealthKit readers behind it, DemoData
 Drive/    Google auth, Drive REST, exporter
 Coach/    LLM clients, prompt building, ObservableObject models
 App/      SwiftUI views, theme, palette
 ```
+
+**Data comes in through `HealthSource`** (`AppServices.source`). Nothing outside `Health/` holds an
+`HKHealthStore` or builds a reader; a new source (FIT import, another device) is a new conformance.
+Tests use a fake source — see `HealthSourceTests`.
 
 **Anything that can be a pure function in `Model/` is one.** Date arithmetic takes an injected
 `Calendar`; nothing in `Model/` reads `Date.now`. That is what makes the plan engine testable.
@@ -69,8 +78,10 @@ Plan pipeline:
 `AthleteProfile` → `PlanBlueprint` (phases counted backward from race day) → `PlanEngine` (applies
 commitments, blackouts, `PlanRules`) → `Prescriber` (targets and fuelling) → `PlanModel`.
 
-`PlanModel.engine` is a **computed property that rebuilds `PlanEngine` on every access.** Hoist it
-into a local before using it in a SwiftUI `body` — this has already caused a performance bug.
+`PlanModel.engine` is **cached**, keyed on profile, settings, rules, calendar and today; built weeks
+and milestones are memoised with it. It used to rebuild on every access and made the month grid take
+260 ms a redraw. Still hoist it into a local in a `body`. `DayRecord.dateKey` is hot too — never put
+a `DateFormatter()` in anything called per day.
 
 LLM access goes through the `LLMClient` protocol (`stream`, `runTool`). Three forced-tool features:
 `PlanAdjuster` (`update_week`), `PlanChangeTool` (`change_plan`), `WorkoutReviewer`

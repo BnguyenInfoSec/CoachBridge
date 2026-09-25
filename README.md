@@ -657,3 +657,49 @@ Your phase dates move by a day or so. Nothing else in the plan changes shape.
 ## Before your next build to the phone
 Put your real Team ID in `Config/Secrets.xcconfig` as `DEVELOPMENT_TEAM`. It's still the
 placeholder, which is the setup that has cost you your API key twice.
+
+---
+
+# v2.8 — dashboard first, edit anything, phases you can see
+
+## The first tab is a training dashboard
+It opens on where you are, not on your resting heart rate: days to the race, which phase and which
+week of it, the whole season as one ribbon, this week's hours against the plan with a Monday–Sunday
+strip of what's done, and the next three sessions. Today is a section underneath — today's sessions,
+then recovery and the day's numbers exactly as before — and the trends sit below that.
+
+## Every field is tappable
+Open any session, planned or your own, and every field is a live control: type, title, date, start,
+length, trainer or road, distance, intensity, heart rate, power, pace, notes. There's no separate
+edit form any more; adding a session uses the same fields.
+
+Editing a **planned** session makes it yours. It's the rule your own sessions already had: fixed
+where you put it, and Claude plans the rest of the week around it. "Go back to the planned session"
+undoes it. A blank target shows what the plan would use, so you can see what you're overriding.
+
+**Edits don't call Claude.** They save on the phone as you go. A "Rework my week around this"
+button appears once you've changed something, and that's one request, still limited to one a
+minute — the same as the old form's Save. Everything you type is length-capped and cleaned before
+it's saved, because it ends up in Claude's prompt, your calendar and your Watch.
+
+## Phases are part of the calendar now
+The Plan header has the season ribbon and "week 3 of 16", with a badge on easier weeks. The month
+grid has a band across the top of each day in the phase's color, paler on easier weeks, so you see
+Base 1 turn into Base 2 across the month. The week and day views say which phase and week they're in.
+
+With calendar writing on, each phase is also an all-day banner across its dates in your Training
+calendar, and every session's notes start with its phase and week. The banners are marked free and
+the Training calendar is never read back as busy, so they don't block anything. This part hasn't
+run against a real calendar yet — check it on the phone.
+
+## The Plan tab stutter
+The month grid took about a quarter of a second to redraw, and it redraws whenever anything changes.
+Three things stacked up: the whole plan was rebuilt twice for every day on screen, each day built its
+entire week to find itself, and turning a date into "2026-09-25" built a new date formatter every
+time. Now it's about 4 ms. The date change also names your Drive files, so a test checks the new
+version against the old one across twelve years of timestamps and six calendars: identical.
+
+## Underneath
+Everything the app reads now comes through one `HealthSource`. Apple Health is the first; FIT import
+and other devices plug in there. That also made the demo-mode leak testable for the first time: a
+test holds a slow Health read open, switches demo on, and checks the late read is thrown away.
