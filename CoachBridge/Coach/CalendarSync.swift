@@ -146,7 +146,9 @@ final class CalendarSync: ObservableObject {
         if writeEnabled && hasAccess {
             do {
                 let written = try write(desired.map { ($0.key, $0.session, $0.slot, $0.day, $0.allDay) },
-                                        from: today, to: end, calendar: cal)
+                                        from: today, to: end, calendar: cal,
+                                        phaseLabel: { e.phaseWeek($0)?.label })
+                try writePhases(PhaseBanner.all(e), engine: e)
                 // Respect sessions the athlete moved by hand in Calendar.
                 for (k, v) in written { placed[k] = v }
                 lastSummary = "\(desired.count) sessions in your Training calendar" + (missing.isEmpty ? "" : " · \(missing.count) without a free slot")
@@ -202,6 +204,52 @@ final class CalendarSync: ObservableObject {
         }
     }
 
+    // MARK: Phase banners
+
+    static func phaseMarker(_ id: String) -> URL { URL(string: "coachbridge://phase/\(id)")! }
+
+    /// One all-day event across each phase, so the season's shape shows in Apple Calendar.
+    /// Kept apart from the session events: their own URL namespace, so the session pass never
+    /// sees or deletes them, and found by searching the whole plan (not the two-week horizon),
+    /// so a changed plan updates or removes them instead of piling up duplicates. The Training
+    /// calendar is never read back as busy time, so these don't block the scheduler.
+    private func writePhases(_ banners: [PhaseBanner], engine e: PlanEngine) throws {
+        guard let first = banners.first, let last = banners.last else { return }
+        let cal = try trainingCalendar()
+        var found: [String: EKEvent] = [:]
+        // EventKit only searches four years at a time; a plan can be that long by itself, and a
+        // banner from an older plan can sit outside the new one's dates.
+        var from = e.add(e.date(first.startISO), days: -366)
+        let until = e.add(e.date(last.endISO), days: 366)
+        while from < until {
+            let to = min(until, e.add(from, days: 1_000))
+            for ev in store.events(matching: store.predicateForEvents(withStart: from, end: to, calendars: [cal])) {
+                guard let url = ev.url, url.scheme == "coachbridge", url.host == "phase" else { continue }
+                let id = url.lastPathComponent
+                if let kept = found[id], kept.eventIdentifier != ev.eventIdentifier {
+                    try store.remove(ev, span: .thisEvent, commit: false)       // a duplicate
+                } else {
+                    found[id] = ev
+                }
+            }
+            from = to
+        }
+        for b in banners {
+            let ev = found.removeValue(forKey: b.id) ?? EKEvent(eventStore: store)
+            ev.calendar = cal
+            ev.url = Self.phaseMarker(b.id)
+            ev.title = b.title
+            ev.notes = b.notes
+            ev.isAllDay = true
+            ev.availability = .free
+            ev.startDate = e.date(b.startISO)
+            ev.endDate = e.add(e.date(b.endISO), days: 1)
+            try store.save(ev, span: .thisEvent, commit: false)
+        }
+        for ev in found.values { try store.remove(ev, span: .thisEvent, commit: false) }  // phases no longer in the plan
+        try store.commit()
+    }
+
     static func marker(_ key: String) -> URL {
         let parts = key.split(separator: "#")
         return URL(string: "coachbridge://session/\(parts[0])/\(parts.count > 1 ? parts[1] : "0")")!
@@ -215,7 +263,8 @@ final class CalendarSync: ObservableObject {
 
     /// Writes the desired events and returns the final interval for each timed key.
     private func write(_ desired: [(String, PlanSession, DateInterval?, Date, Bool)],
-                       from start: Date, to end: Date, calendar: Calendar) throws -> [String: DateInterval] {
+                       from start: Date, to end: Date, calendar: Calendar,
+                       phaseLabel: (Date) -> String?) throws -> [String: DateInterval] {
         let cal = try trainingCalendar()
         let existing = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: [cal]))
         var byKey: [String: EKEvent] = [:]
@@ -229,7 +278,7 @@ final class CalendarSync: ObservableObject {
             ev.calendar = cal
             ev.url = Self.marker(key)
             ev.title = Self.title(for: s, placed: slot != nil || s.kind == .snow || s.kind == .fun)
-            ev.notes = Self.notes(for: s)
+            ev.notes = Self.notes(for: s, phase: phaseLabel(day))
             let minutes = max(15, s.rx?.durationMin ?? 45)
             if allDay {
                 ev.isAllDay = true
@@ -268,8 +317,9 @@ final class CalendarSync: ObservableObject {
         return t
     }
 
-    static func notes(for s: PlanSession) -> String {
+    static func notes(for s: PlanSession, phase: String? = nil) -> String {
         var lines: [String] = []
+        if let phase { lines.append(phase); lines.append("") }
         if !s.detail.isEmpty { lines.append(s.detail) }
         if let rx = s.rx {
             let targets: [(String, String?)] = [("Distance", rx.distance), ("Intensity", rx.intensity), ("Heart rate", rx.heartRate),

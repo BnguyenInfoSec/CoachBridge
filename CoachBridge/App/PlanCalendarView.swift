@@ -373,14 +373,118 @@ private struct SeasonHeader: View {
 
     var body: some View {
         let ph = engine.phase(for: date)
+        let pw = engine.phaseWeek(date)
         let days = engine.daysToRace(from: .now)
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("\(days / 7) weeks · \(days) days to \(engine.raceName)")
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-            Text(ph.name).font(.title2.bold())
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(ph.name).font(.title2.bold())
+                if let pw {
+                    Text("week \(pw.week) of \(pw.weeks)")
+                        .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                if let pw, pw.label.hasSuffix("easier week") {
+                    Text("Easier week")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Palette.color(forPhase: ph.id).opacity(0.18), in: Capsule())
+                }
+            }
+            PhaseRibbon(engine: engine, date: date)
             Text("\(ph.hours) / week · \(ph.goal)").font(.subheadline).foregroundStyle(.secondary)
         }
         .padding(.top, 4)
+    }
+}
+
+/// The whole season as one bar: each phase sized by its length, the current one at full
+/// strength, a marker on the day being looked at. The shape of the plan at a glance.
+struct PhaseRibbon: View {
+    let engine: PlanEngine
+    let date: Date
+
+    private struct Segment: Identifiable {
+        let id: String
+        let short: String
+        let name: String
+        let days: Int
+        let weeks: Int
+    }
+
+    var body: some View {
+        let segs = segments
+        let total = max(1, segs.reduce(0) { $0 + $1.days })
+        let current = engine.phase(for: date).id
+        let start = engine.date(engine.startISO)
+        let into = engine.calendar.dateComponents([.day], from: start, to: engine.calendar.startOfDay(for: date)).day ?? 0
+        let marker = min(1, max(0, (Double(into) + 0.5) / Double(total)))
+        let gap: CGFloat = 2
+
+        VStack(alignment: .leading, spacing: 4) {
+            GeometryReader { geo in
+                let usable = geo.size.width - gap * CGFloat(max(0, segs.count - 1))
+                HStack(spacing: gap) {
+                    ForEach(segs) { s in
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(Palette.color(forPhase: s.id).opacity(s.id == current ? 1 : 0.4))
+                            .frame(width: max(3, usable * CGFloat(s.days) / CGFloat(total)))
+                    }
+                }
+                .overlay(alignment: .leading) {
+                    if engine.inPlan(date) {
+                        Capsule()
+                            .fill(Color.primary)
+                            .frame(width: 3, height: 16)
+                            .offset(x: geo.size.width * marker - 1.5)
+                    }
+                }
+            }
+            .frame(height: 10)
+
+            GeometryReader { geo in
+                let usable = geo.size.width - gap * CGFloat(max(0, segs.count - 1))
+                HStack(spacing: gap) {
+                    ForEach(segs) { s in
+                        Text(s.short)
+                            .font(.caption2.weight(s.id == current ? .semibold : .regular))
+                            .foregroundStyle(s.id == current ? .primary : .secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(width: max(3, usable * CGFloat(s.days) / CGFloat(total)), alignment: .leading)
+                    }
+                }
+            }
+            .frame(height: 14)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Season")
+        .accessibilityValue(segs.map { "\($0.name), \($0.weeks) week\($0.weeks == 1 ? "" : "s")" }.joined(separator: "; ")
+                            + ". Now: \(engine.phaseWeek(date)?.label ?? "outside the plan").")
+    }
+
+    private var segments: [Segment] {
+        engine.phases.map { p in
+            let days = (engine.calendar.dateComponents([.day], from: engine.date(p.start), to: engine.date(p.end)).day ?? 0) + 1
+            return Segment(id: p.id, short: p.short, name: p.name, days: days,
+                           weeks: max(1, Int((Double(days) / 7).rounded(.up))))
+        }
+    }
+}
+
+/// "Base 1 · week 3 of 10" as a colored chip, for the week and day views.
+struct PhaseChip: View {
+    let week: PhaseWeek
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle().fill(Palette.color(forPhase: week.phase.id)).frame(width: 8, height: 8)
+            Text(week.label).font(.caption.weight(.semibold)).lineLimit(1)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Palette.color(forPhase: week.phase.id).opacity(0.16), in: Capsule())
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -482,6 +586,7 @@ private struct MonthGrid: View {
                     let day = plan.day(d)
                     Button { onPick(d) } label: {
                         MonthCell(day: day,
+                                  phase: e.phaseWeek(d),
                                   outside: cal.component(.month, from: d) != monthIndex,
                                   isToday: d == today,
                                   isSelected: d == cal.startOfDay(for: selected),
@@ -492,9 +597,29 @@ private struct MonthGrid: View {
                 }
             }
             legend
+            phaseLegend(e, first: start)
         }
         .padding(10)
         .glassSurface(radius: 16)
+    }
+
+    /// The phases on screen this month, so the stripe colors mean something without a lookup.
+    private func phaseLegend(_ e: PlanEngine, first: Date) -> some View {
+        var seen: [PhaseWeek] = []
+        for i in stride(from: 0, to: 42, by: 7) {
+            for day in [e.add(first, days: i), e.add(first, days: i + 6)] {
+                if let pw = e.phaseWeek(day), !seen.contains(where: { $0.phase.id == pw.phase.id }) { seen.append(pw) }
+            }
+        }
+        return HStack(spacing: 12) {
+            ForEach(seen, id: \.phase.id) { pw in
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 1.5).fill(Palette.color(forPhase: pw.phase.id)).frame(width: 14, height: 4)
+                    Text(pw.phase.name).font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var legend: some View {
@@ -518,6 +643,7 @@ private struct MonthGrid: View {
 
 private struct MonthCell: View {
     let day: DayPlan
+    let phase: PhaseWeek?
     let outside: Bool
     let isToday: Bool
     let isSelected: Bool
@@ -546,8 +672,18 @@ private struct MonthCell: View {
             Spacer(minLength: 0)
         }
         .padding(5)
+        .padding(.top, 2)
         .frame(maxWidth: .infinity, minHeight: 48, alignment: .topLeading)
         .glassSurface(radius: 8)
+        // The phase as a band across the top of every day, so a phase change reads as a change
+        // of color across the month, and easier weeks as a paler band.
+        .overlay(alignment: .top) {
+            if let phase {
+                UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous)
+                    .fill(Palette.color(forPhase: phase.phase.id).opacity(phase.isRecovery ? 0.45 : 1))
+                    .frame(height: 4)
+            }
+        }
         .overlay(RoundedRectangle(cornerRadius: 8)
             .stroke(isSelected ? Color.primary : (isToday ? Palette.series1 : .clear), lineWidth: isSelected ? 2 : 1))
         .opacity(outside ? 0.4 : 1)
@@ -569,7 +705,18 @@ private struct WeekList: View {
         let doneMin = days.flatMap(\.done).reduce(0) { $0 + Int($1.duration / 60) }
         let today = e.calendar.startOfDay(for: .now)
 
+        let phases = [e.phaseWeek(monday), e.phaseWeek(e.add(monday, days: 6))].compactMap { $0 }
         VStack(spacing: 10) {
+            if let first = phases.first {
+                HStack(spacing: 6) {
+                    PhaseChip(week: first)
+                    if let last = phases.last, last.phase.id != first.phase.id {
+                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary)
+                        PhaseChip(week: last)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
             HStack {
                 Text("Planned \(Fmt.hours(plannedMin))").font(.subheadline.monospacedDigit())
                 Spacer()
@@ -694,8 +841,11 @@ private struct DayDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(plan.engine.inPlan(day.date) ? plan.engine.phase(for: day.date).name : "Outside the plan")
-                .font(.caption).foregroundStyle(.secondary)
+            if let pw = plan.engine.phaseWeek(day.date) {
+                PhaseChip(week: pw)
+            } else {
+                Text("Outside the plan").font(.caption).foregroundStyle(.secondary)
+            }
 
             if let w = weather.day(day.date) {
                 WeatherCard(day: w, hot: weather.isHot(day.date), location: weather.locationName,

@@ -90,6 +90,58 @@ struct PlanPhase: Sendable, Equatable {
     let focus: String
 }
 
+/// A day's place in the season, for labelling calendars: "Base 1 · week 3 of 10".
+struct PhaseWeek: Sendable, Equatable {
+    let phase: PlanPhase
+    /// Position of the phase in the plan, for a stable color.
+    let index: Int
+    let week: Int
+    let weeks: Int
+    let isRecovery: Bool
+
+    /// "Base 1 · week 3 of 10", plus "· easier week" on a recovery week. The taper already says
+    /// what it is, so it isn't also called an easier week.
+    var label: String {
+        var s = "\(phase.name) · week \(week) of \(weeks)"
+        if isRecovery && phase.id != "taper" && phase.id != "rec" { s += " · easier week" }
+        return s
+    }
+}
+
+/// One phase as an all-day banner across its dates in the athlete's Training calendar, so the
+/// season's shape shows in Apple Calendar and not just in the app.
+struct PhaseBanner: Sendable, Equatable {
+    let id: String
+    let title: String
+    /// First day, "yyyy-MM-dd".
+    let startISO: String
+    /// Last day, inclusive.
+    let endISO: String
+    let notes: String
+
+    init(_ p: PlanPhase, weeks: Int) {
+        id = p.id
+        title = "\(p.name) · \(weeks) week\(weeks == 1 ? "" : "s")"
+        startISO = p.start
+        endISO = p.end
+        notes = """
+        \(p.goal)
+
+        Focus: \(p.focus)
+        Volume: \(p.hours) a week
+
+        Coach Bridge writes this banner from your plan and rewrites it on each sync.
+        """
+    }
+
+    static func all(_ e: PlanEngine) -> [PhaseBanner] {
+        e.phases.map { p in
+            let days = (e.calendar.dateComponents([.day], from: e.date(p.start), to: e.date(p.end)).day ?? 0) + 1
+            return PhaseBanner(p, weeks: max(1, Int((Double(days) / 7).rounded(.up))))
+        }
+    }
+}
+
 struct Milestone: Sendable, Equatable {
     enum Kind: String, Sendable { case test, deadline, fun, recovery, race, check }
     let date: String
@@ -185,6 +237,22 @@ struct PlanEngine: Sendable {
     var phases: [PlanPhase] { blueprint.phases }
 
     func phase(for d: Date) -> PlanPhase { blueprint.phase(for: iso(d)) }
+
+    /// Where a day sits in the season: its phase, which week of that phase, and whether the
+    /// plan eases off that week. Nil outside the plan, where "week 3 of Base 1" would be a lie.
+    func phaseWeek(_ d: Date) -> PhaseWeek? {
+        guard inPlan(d) else { return nil }
+        let iso = iso(d)
+        guard let i = phases.firstIndex(where: { iso >= $0.start && iso <= $0.end }) else { return nil }
+        let p = phases[i]
+        let start = date(p.start)
+        let into = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: d)).day ?? 0
+        let length = (calendar.dateComponents([.day], from: start, to: date(p.end)).day ?? 0) + 1
+        return PhaseWeek(phase: p, index: i,
+                         week: into / 7 + 1,
+                         weeks: max(1, Int((Double(length) / 7).rounded(.up))),
+                         isRecovery: WeekBuilder.isRecoveryWeek(weekIndex(monday(of: d))))
+    }
 
     static func mk(_ k: SessionKind, _ t: String, _ d: String = "") -> PlanSession {
         PlanSession(kind: k, title: t, detail: d)

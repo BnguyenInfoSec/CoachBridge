@@ -81,6 +81,20 @@ enum Palette {
         }
     }
 
+    /// Training phases as one ramp of a single hue, light to deep as the load builds and back
+    /// down for the taper. A ramp rather than the sport palette, so a phase band never reads as
+    /// "swim week" next to the sport-colored session dots.
+    static func color(forPhase id: String) -> Color {
+        switch id {
+        case "rec": return Color(light: 0xa9c7ee, dark: 0x3b5a82)
+        case "b1": return Color(light: 0x6fa3e3, dark: 0x4f7fc0)
+        case "b2": return Color(light: 0x3d7fd4, dark: 0x5f93dc)
+        case "build": return Color(light: 0x1f5bb0, dark: 0x86b1ee)
+        case "taper": return Color(light: 0x8a7fd6, dark: 0x9d93e6)
+        default: return neutral
+        }
+    }
+
     /// Fixed sport → slot mapping, so a sport keeps its color whatever else is on screen.
     static func color(for sport: Sport) -> Color {
         switch sport {
