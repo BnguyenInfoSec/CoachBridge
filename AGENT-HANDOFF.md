@@ -11,24 +11,28 @@ and Apple Watch Ultra. He is training for IRONMAN California (Sacramento), ~17 O
 
 ## 0. The single most important fact
 
-**No version of this app has ever been compiled by the agent that wrote it.** Every release so far
-was written in a Linux sandbox with no Swift toolchain, shipped as a zip, and compiled by Brandon,
-who relayed build errors back by screenshot. That loop is slow and it is why you are here.
+**Until v2.7.0 no version of this app was compiled by the agent that wrote it.** Every release was
+written in a Linux sandbox with no Swift toolchain, shipped as a zip, and compiled by Brandon, who
+relayed build errors back by screenshot. That loop was slow, and it ended on 2026-09-25.
 
-**Your first job is to compile it and fix whatever breaks — before you write a single new feature.**
+v2.7.1 was the first compile by an agent (Xcode 27). The app itself built clean, including the
+v2.6/v2.7 code everyone expected to break. The test suite didn't compile: four tests had fallen
+behind API changes. Once it did, three tests failed; one was stale, and two were real plan-engine
+bugs (the first recovery week out-loaded the week before it; the taper missed race day). All 164
+tests were green after that. The repo is now in git: commit `90d2b22` is v2.7.0 as delivered, and
+each fix after it is its own commit with the reason in the message.
+
+Keep it that way:
 
 ```bash
 cd ~/Documents/Dev/CoachBridge
 xcodegen generate
-xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' build 2>&1 | tail -40
-xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test 2>&1 | tail -40
+xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -40
+xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test 2>&1 | tail -40
 ```
 
-Expect real errors on the first run, concentrated in the most recently added code (v2.6 and v2.7,
-see §6). The test suite (`⌘U`) has not been run since v2.0 and several tests were rewritten around
-a model refactor since then. Assume it is red until you have seen it green.
-
-Do not report "done" on anything until `xcodebuild build` and `xcodebuild test` both pass.
+Xcode 27 has no iPhone 16 Pro simulator; any installed iPhone works. Do not report "done" on
+anything until `xcodebuild build` and `xcodebuild test` both pass.
 
 ---
 
@@ -47,7 +51,7 @@ A training companion that does four things:
 4. **Coach.** An in-app chat with an LLM that can see the athlete's data and propose plan changes,
    plus a written note reacting to each completed workout.
 
-Current version **2.7.0**. Distribution is personal: Xcode install, TestFlight later. Not on the App
+Current version **2.7.1**. Distribution is personal: Xcode install, TestFlight later. Not on the App
 Store and not currently intended for it (see §8).
 
 ---
@@ -228,7 +232,8 @@ Dashboard, chat, plan calendar, calendar sync and weather have all run on device
 
 ### Known open items
 - **Privacy policy** — required before TestFlight external testing.
-- `⌘U` not run since v2.0.
+- `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty, the one place
+  `Model/` reads the clock.
 - Venue seed data is San Diego-only for a new user.
 - Legacy `PlanSettings` fields (`classDays`, `classUntil`, `snowSaturdays`, `hasTrainer`) exist only
   for migration and should be deleted once every install has migrated.

@@ -14,19 +14,24 @@ bar in §4 is not decoration.
 
 ```bash
 xcodegen generate                       # after adding ANY file — sources are folder-globbed
-xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' build
-xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
+
+Xcode 27 ships no iPhone 16 Pro simulator; use any installed iPhone
+(`xcrun simctl list devices available`). `CODE_SIGNING_ALLOWED=NO` makes the device build a pure
+compile check, so it doesn't depend on the team in `Secrets.xcconfig`.
 
 `CoachBridge.xcodeproj` is a **build product**. Never hand-edit it; edit `project.yml` and
 regenerate. It's git-ignored.
 
-**No version of this app has ever been compiled by the agent that wrote it.** Everything through
-v2.7.0 was written without a Swift toolchain and compiled by hand on Brandon's Mac. Assume the build
-and the test suite are red until you have personally seen them green. `⌘U` has not run since v2.0,
-and several tests were rewritten around a model refactor after that.
+Everything through v2.7.0 was written without a Swift toolchain. v2.7.1 (2026-09-25) is the first
+version compiled and tested by an agent: the app built clean, the tests needed fixing, and two of the
+failing tests were real plan-engine bugs (README, v2.7.1). Build and all 164 tests were green then.
+Commit `90d2b22` is v2.7.0 exactly as delivered, for comparison.
 
-Don't claim a task is done until `build` and `test` both pass.
+Keep it green. Don't claim a task is done until `build` and `test` both pass, and commit one fix
+per commit with the reason in the message.
 
 ## 2. Signing — the recurring trap
 
@@ -122,6 +127,8 @@ is told to plan around them and `RuleEngine` never touches them.
 - **No one has seen a real coach's note.** The `review_workout` prompt has never hit a live model,
   and the note's quality is the whole feature.
 - Privacy policy still needed before TestFlight external testing.
+- `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty: the one place
+  `Model/` reads the clock. Known, not yet fixed.
 
 ## 7. External constraints
 

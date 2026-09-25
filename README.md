@@ -616,3 +616,44 @@ Recent RPE and mood now go into the weekly plan adjustment and the Coach chat, w
 the model to trust the rating over heart rate when the two disagree — a rising RPE at the same power
 is fatigue arriving before the numbers show it. That's the point of asking: the plan can respond to
 a hard week before your resting heart rate does.
+
+---
+
+# v2.7.1 — compiled for the first time
+
+No new features. This is the first version an agent built and tested itself, on your Mac, instead of
+handing you a zip to compile. The project is now a git repo: commit `90d2b22` is v2.7.0 exactly as
+delivered, and every fix after it is one commit saying what was wrong and why, so you can see what
+was delivered versus what had to be repaired.
+
+## What broke
+The app compiled clean, the new v2.6/v2.7 code included. The tests didn't: `⌘U` hadn't run since
+v2.0, and four tests still called things the way they worked before the model refactor. Those were
+fixed in the tests; no app code changed for them.
+
+Once the tests ran, three failed. One expected the wrong word — the line the plan adjuster sends
+the coach says `run`, not `Run`, and that's correct, because the prompt tells the model to use
+exactly those words. The other two were real bugs in the plan.
+
+## Your first recovery week was the hardest week so far
+A recovery week was 70% of its own spot on the ramp. Volume climbs from zero over the first twelve
+weeks, so at week 3 that came out *above* week 2 — the first "easy" week carried more than the one
+before it. A recovery week is now 70% of the week before it. Every recovery week is a little lighter
+(week 7 goes from 41% of the ramp to 35%); from week 13 on nothing changes.
+
+## The taper didn't end on race day
+Phases were laid out forward from your start date in whole weeks, and weeks rarely divide the time
+to a race exactly. For IRONMAN California it's exactly 57 weeks, and the taper finished on the
+**Saturday before the race**, leaving race day outside every phase. From any other start date the
+taper would have run up to six days *past* the race.
+
+Phases are now counted backward from race day, which is what the plan was always described as
+doing. Base 1 soaks up the odd days, the same place a short runway already came out of, so the taper
+is never cut. Checked across every start weekday and every runway from 4 to 208 weeks — 10,003
+cases — with the taper ending on race day in all of them.
+
+Your phase dates move by a day or so. Nothing else in the plan changes shape.
+
+## Before your next build to the phone
+Put your real Team ID in `Config/Secrets.xcconfig` as `DEVELOPMENT_TEAM`. It's still the
+placeholder, which is the setup that has cost you your API key twice.
