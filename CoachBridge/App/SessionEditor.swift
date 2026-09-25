@@ -69,7 +69,9 @@ struct SessionFields: View {
     private func target(_ label: String, _ icon: String,
                         _ field: WritableKeyPath<Prescription, String?>) -> some View {
         LabeledContent {
-            TextField(defaults?[keyPath: field] ?? "—", text: text(field))
+            // Wraps rather than truncating: the plan's targets are often a full sentence.
+            TextField(defaults?[keyPath: field] ?? "—", text: text(field), axis: .vertical)
+                .lineLimit(1...3)
                 .multilineTextAlignment(.trailing)
                 .submitLabel(.done)
         } label: {
