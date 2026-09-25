@@ -45,7 +45,47 @@ final class PlanModel: ObservableObject {
     private var bag: Set<AnyCancellable> = []
     private static let lastRequestKey = "plan.lastClaudeRequest"
 
-    var engine: PlanEngine { PlanEngine(profile: profile, settings: settings, rules: rules.rules) }
+    /// Built once per change of its inputs rather than on every access. It used to be rebuilt
+    /// each time, and `day(_:)` reads it twice (directly and via `prescriber`), so a month grid
+    /// rebuilt the whole blueprint ~84 times per redraw — 260 ms on the simulator, the Plan
+    /// tab's stutter. `today` is in the key because a profile with no start date starts today.
+    var engine: PlanEngine {
+        let key = EngineKey(profile: profile, settings: settings, rules: rules.rules,
+                            calendar: .current, today: Calendar.current.startOfDay(for: .now))
+        if let cached = engineCache, cached.key == key { return cached.engine }
+        let e = PlanEngine(profile: key.profile, settings: key.settings, calendar: key.calendar, rules: key.rules)
+        engineCache = (key, e)
+        weekMemo = [:]
+        milestoneMemo = nil
+        return e
+    }
+    private struct EngineKey: Equatable {
+        let profile: AthleteProfile
+        let settings: PlanSettings
+        let rules: [PlanRule]
+        let calendar: Calendar
+        let today: Date
+    }
+    private var engineCache: (key: EngineKey, engine: PlanEngine)?
+    /// Built weeks by Monday, and milestones by day, for the cached engine. `sessions(on:)`
+    /// builds a whole week to return one day, so seven days of a month grid built the same
+    /// week seven times; milestones were rebuilt in full for every cell. Cleared with the engine.
+    private var weekMemo: [String: [[PlanSession]]] = [:]
+    private var milestoneMemo: [String: [Milestone]]?
+
+    private func planned(on d: Date, engine e: PlanEngine) -> [PlanSession] {
+        guard e.inPlan(d) else { return [] }
+        let monday = e.monday(of: d)
+        let key = e.iso(monday)
+        let week = weekMemo[key] ?? e.week(monday)
+        weekMemo[key] = week
+        return week[(e.jsDay(d) + 6) % 7]
+    }
+
+    private func milestones(on iso: String, engine e: PlanEngine) -> [Milestone] {
+        if milestoneMemo == nil { milestoneMemo = Dictionary(grouping: e.milestones, by: \.date) }
+        return milestoneMemo?[iso] ?? []
+    }
     var blueprint: PlanBlueprint { engine.blueprint }
     /// False until the athlete has told us what they're training for.
     var needsSetup: Bool { !profile.isComplete }
@@ -78,7 +118,7 @@ final class PlanModel: ObservableObject {
         let d = e.calendar.startOfDay(for: date)
         let iso = e.iso(d)
         let rx = prescriber
-        let original = e.sessions(on: d).map { rx.prescribe($0, on: d) }
+        let original = planned(on: d, engine: e).map { rx.prescribe($0, on: d) }
         let change = chatDays[iso] ?? update?.days[iso]
         let mine = custom.forDay(iso)
         var sessions = (change?.sessions.map { merged($0, on: d, rx: rx) } ?? original)
@@ -88,7 +128,7 @@ final class PlanModel: ObservableObject {
         // The athlete's own sessions always stand, exactly as entered.
         sessions += mine.map { merged($0.planSession(), on: d, rx: rx) }
         return DayPlan(date: d, iso: iso, sessions: sessions, original: original, change: change,
-                       milestones: e.milestones(on: d), done: workoutsByDay[iso] ?? [])
+                       milestones: milestones(on: iso, engine: e), done: workoutsByDay[iso] ?? [])
     }
 
     /// Fills anything left blank (by Claude or by a hand-entered session) from the plan's own rules.

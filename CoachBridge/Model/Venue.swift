@@ -209,7 +209,10 @@ final class VenueStore: ObservableObject {
     func image(for venue: Venue) -> UIImage? {
         if let cached = images[venue.id] { return cached }
         guard let url = photoURL(venue), let data = try? Data(contentsOf: url),
-              let img = UIImage(data: data) else { return nil }
+              let raw = UIImage(data: data) else { return nil }
+        // Decoded now, once, instead of lazily on first draw — which landed mid-scroll as a hitch
+        // the first time a day with this place came on screen.
+        let img = raw.preparingForDisplay() ?? raw
         images[venue.id] = img
         return img
     }

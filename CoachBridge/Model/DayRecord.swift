@@ -44,12 +44,17 @@ struct DayRecord: Equatable, Sendable {
     }
 
     /// "yyyy-MM-dd" for a local day.
+    /// This names the Drive files and keys every plan lookup, so it runs hundreds of times per
+    /// calendar redraw. It used to build a DateFormatter each call (~160 µs on the simulator);
+    /// plain Gregorian components give the same string (ContractTests sweeps both) in a
+    /// fraction of that.
     static func dateKey(for day: Date, calendar: Calendar = .current) -> String {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = calendar.timeZone
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: day)
+        var g = calendar
+        if g.identifier != .gregorian {
+            g = Calendar(identifier: .gregorian)
+            g.timeZone = calendar.timeZone
+        }
+        let c = g.dateComponents([.year, .month, .day], from: day)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 }
