@@ -29,22 +29,27 @@ struct PlanBlueprint: Sendable, Equatable {
 
         var phases: [PlanPhase] = []
         var hours: [String: ClosedRange<Double>] = [:]
-        var cursor = start
+        // Lay the blocks backward from the end so the taper finishes on race day. Laid forward from
+        // the start, whole weeks rarely divide the runway: the taper ended the day before the race
+        // or ran up to six days past it. The first phase absorbs the odd days instead.
+        var cursor = calendar.date(byAdding: .day, value: -(totalWeeks * 7 - 1), to: end) ?? start
         for (id, weekCount) in lengths where weekCount > 0 {
             let phaseStart = cursor
             let phaseEnd = calendar.date(byAdding: .day, value: weekCount * 7 - 1, to: phaseStart) ?? phaseStart
+            cursor = calendar.date(byAdding: .day, value: weekCount * 7, to: phaseStart) ?? phaseEnd
+            // Only a runway under the 4-week minimum can put a whole phase before the start.
+            guard phaseEnd >= start else { continue }
             let span = hourRange(id: id, current: now, peak: peak)
             hours[id] = span
             phases.append(PlanPhase(
                 id: id,
                 name: name(id),
                 short: short(id),
-                start: AthleteProfile.iso(phaseStart, calendar: calendar),
+                start: AthleteProfile.iso(phases.isEmpty ? start : phaseStart, calendar: calendar),
                 end: AthleteProfile.iso(phaseEnd, calendar: calendar),
                 hours: hoursLabel(span),
                 goal: goal(id, profile),
                 focus: focus(id, profile)))
-            cursor = calendar.date(byAdding: .day, value: weekCount * 7, to: phaseStart) ?? phaseEnd
         }
 
         // The plan ends on race day, or at the end of the last phase when there's no race.
