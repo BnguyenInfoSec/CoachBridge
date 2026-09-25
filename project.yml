@@ -25,7 +25,7 @@ settings:
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: targeted   # Google/HealthKit types aren't Sendable yet; 'complete' is just noise
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "2.8.0"
+    MARKETING_VERSION: "2.9.0"
     CURRENT_PROJECT_VERSION: "1"
 
 targets:

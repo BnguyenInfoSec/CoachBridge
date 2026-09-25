@@ -51,7 +51,7 @@ A training companion that does four things:
 4. **Coach.** An in-app chat with an LLM that can see the athlete's data and propose plan changes,
    plus a written note reacting to each completed workout.
 
-Current version **2.8.0**. Distribution is personal: Xcode install, TestFlight later. Not on the App
+Current version **2.9.0**. Distribution is personal: Xcode install, TestFlight later. Not on the App
 Store and not currently intended for it (see §8).
 
 ---
@@ -231,7 +231,8 @@ Dashboard, chat, plan calendar, calendar sync and weather have all run on device
   and the quality of that note is the entire feature. Generate a few early and tune the prompt.
 
 ### Known open items
-- **Privacy policy** — required before TestFlight external testing.
+- **Privacy policy** — drafted in `docs/PRIVACY.md` (v2.9); needs review and hosting before
+  TestFlight external testing.
 - `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty, the one place
   `Model/` reads the clock.
 - Venue seed data is San Diego-only for a new user.
@@ -240,9 +241,10 @@ Dashboard, chat, plan calendar, calendar sync and weather have all run on device
 - Migration gap: `PlanSettings.save()` only ever fired on change, so Brandon's own install gets an
   empty profile and has to re-enter it once.
 - The workout feel sheet auto-opens for anything finished within 48 hours. That window is a guess.
-- Two improvements offered and not yet built: a "Test key" button that verifies an API key before
-  saving, and an honest empty state that says *which provider* has no key on *this iPhone* (a
-  missing key currently looks identical to a fresh install).
+- v2.9 added the Watch companion, FIT import, provenance and HRV labelling, fitness/fatigue/form,
+  the race-day plan, export/delete, golf, and the "Test key" button with provider-specific
+  missing-key messages. The Watch app and FIT import have not met real hardware or real files yet;
+  see the "Untested surface" list in CLAUDE.md.
 
 ---
 

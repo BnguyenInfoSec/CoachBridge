@@ -711,3 +711,73 @@ version against the old one across twelve years of timestamps and six calendars:
 Everything the app reads now comes through one `HealthSource`. Apple Health is the first; FIT import
 and other devices plug in there. That also made the demo-mode leak testable for the first time: a
 test holds a slow Health read open, switches demo on, and checks the late read is thrown away.
+
+---
+
+# v2.9 — a Watch app, other devices, and your data
+
+## Coach Bridge on your wrist
+A Watch app that shows what the phone knows: days to the race, which phase and week, today's
+sessions and the next few, recovery, and a "How did it feel?" list for anything you finished in the
+last two days. Rate it with five faces and the Digital Crown; the answer queues for the phone and
+arrives even if the phone app isn't open. "Start in Workout" opens the session in the Workout app
+with its steps and alerts. Complications show the next session and the race countdown.
+
+The phone stays in charge. The Watch never reads Health, never builds a plan and never calls
+Claude — and an answer from the Watch doesn't write a coach's note on its own, because a note
+costs a request and a background launch shouldn't spend money you didn't see. Open the workout on
+the phone when you want one. Watch faces draw while the watch is locked, so the complications read
+a separate copy with only the next session and the countdown — no health numbers.
+
+## Fuel reminders
+On a session of 75 minutes or more, or on race day, "Start fuel timer" taps you every time it's
+time to eat. It's local notifications on the watch: they come through while the Workout app is
+recording, and nothing leaves the watch.
+
+## Race day
+From the dashboard: pacing for each leg from your FTP and threshold heart rate (an Ironman bike at
+68–73% of FTP, the run in the low 80s of threshold), and a fuelling timeline from breakfast to the
+finish — a gel before the swim, about 26 g of carbs every 20 minutes on the bike with a savory bite
+each hour, carbs at the run's aid stations. It's the 80 g an hour you trained, at the low end,
+because race nerves make the top of the range harder. Leg times are typical finish times, used only
+to place the fuel; go by your watch. The plan reaches the Watch the day before, so it's there on
+race morning even if your phone isn't.
+
+## Rides from any bike computer
+Settings → Other devices → Import FIT files, or open a .fit file in Coach Bridge from Files or the
+share sheet. A ride that Garmin Connect or Wahoo also synced into Apple Health counts once — the
+copy with more detail wins. Only the totals are kept: never the route, never the file.
+
+The FIT reader is written for the app and assumes every file is hostile: sizes and counts are
+capped, every length is checked, the checksum must match, and it's been fed thousands of corrupted
+files and every possible truncation without falling over. It hasn't met a file from a real device
+yet — send it one of yours.
+
+## Fitness, fatigue and form
+The training-load model everyone else uses (CTL, ATL, TSB), from your workouts: fitness is the last
+six weeks, fatigue the last week, form the difference coming into today. It's worked out from
+heart rate, so add your threshold heart rate in Plan settings for a better estimate; the card and
+the coach both say how it was calculated.
+
+## The coach knows which HRV it's looking at
+Apple Health's HRV is SDNN. Whoop, Garmin and Oura report RMSSD, which runs higher, and the coach
+was only ever told "HRV (ms)". It's now told it's SDNN and to judge it against your own trend, not
+anyone's published norms.
+
+## Golf
+A session type for rounds you add: its own targets (walking 18 holes is easy aerobic time; a cart
+isn't), water and a snack at the turn, and it goes to the Watch as a golf workout with no fixed
+length. Add a photo of your course under Places; there's no illustration for golf yet.
+
+## Your data
+Settings → Your data. **Export** gives you everything Coach Bridge stored as one JSON file.
+**Delete** removes all of it from the phone and the Watch, takes the scheduled workouts off the
+Watch, revokes Drive access, deletes your API keys, and can remove the Training calendar. Apple
+Health and the files already in Drive are yours to manage there. A draft privacy policy lives in
+`docs/PRIVACY.md` — checking it against the code turned up that calendar event titles go to the
+coach when the week is adjusted, so the policy says so.
+
+## Keys
+"Test key" checks an API key before you rely on it, using the provider's free model list —
+nothing is generated, nothing billed. And a missing key now says which provider and that it's
+missing on this iPhone; the chat used to say "Add your Anthropic API key" even with OpenAI chosen.

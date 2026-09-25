@@ -1,6 +1,6 @@
 # CLAUDE.md — Coach Bridge
 
-Native iPhone app (SwiftUI, iOS 18+, iPhone only). Reads Apple Health, exports a daily JSON to
+Native iPhone app with an Apple Watch companion (SwiftUI, iOS 18+, watchOS 11+). Reads Apple Health, exports a daily JSON to
 Google Drive, generates and adjusts a periodised triathlon training plan, and runs an LLM coach.
 Owner: Brandon — Ironman triathlete and an Information Security Officer by trade, so the privacy
 bar in §4 is not decoration.
@@ -61,7 +61,21 @@ Health/   HealthSource protocol, HealthKit readers behind it, DemoData
 Drive/    Google auth, Drive REST, exporter
 Coach/    LLM clients, prompt building, ObservableObject models
 App/      SwiftUI views, theme, palette
+Shared/   the only code the phone and Watch share: WatchSnapshot, WatchFeelReport, GlanceStore
+Watch/    watchOS app (WatchModel, views, FuelTimer)
+WatchWidgets/  complications
 ```
+
+**The Watch never computes, reads Health or calls an LLM.** The phone builds a versioned
+`WatchSnapshot` (`WatchLink`) and the watch displays it. Feel reports come back through
+`transferUserInfo` and are validated on the phone before saving (known workout, known mood, RPE
+1–10). Complications read `WatchGlance` only, which must never carry health data: it's stored with
+weaker protection because faces draw while locked (`WatchSnapshotTests` checks this). A watch
+answer never triggers a coach's note on its own — that would spend money in the background.
+
+**FIT files are untrusted input.** `FITParser` bounds-checks everything, caps size and message
+count, verifies the CRC, and keeps totals only — never routes. Keep it that way, and keep the
+fuzz and truncation tests passing.
 
 **Data comes in through `HealthSource`** (`AppServices.source`). Nothing outside `Health/` holds an
 `HKHealthStore` or builds a reader; a new source (FIT import, another device) is a new conformance.
@@ -140,6 +154,11 @@ is told to plan around them and `RuleEngine` never touches them.
 - Privacy policy still needed before TestFlight external testing.
 - `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty: the one place
   `Model/` reads the clock. Known, not yet fixed.
+- The Watch app has only run in paired simulators. Feel answered on the Watch, complications on a
+  face, and fuel notifications during a Workout session haven't been seen on a real watch.
+- FIT import is tested with generated files only; no real device file has been parsed yet.
+- `docs/PRIVACY.md` is a draft. It must match the code: if you change what leaves the phone,
+  change the policy in the same commit.
 
 ## 7. External constraints
 

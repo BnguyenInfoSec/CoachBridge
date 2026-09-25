@@ -1,8 +1,9 @@
 # Coach Bridge
 
-A native iPhone training companion for endurance athletes. Coach Bridge reads your training and
-recovery data, builds a periodised plan toward your race, adapts it with an LLM coach, and keeps
-your data yours: read-only access, stored on the device, exported only where you choose.
+A native iPhone and Apple Watch training companion for endurance athletes. Coach Bridge brings
+your training data together — Apple Health and the FIT files from any bike computer — builds a
+periodised plan toward your race, adapts it with an LLM coach, and keeps your data yours:
+read-only access, stored on your devices, exported only where you choose.
 
 <p align="center">
   <img src="docs/images/dashboard.png" width="300" alt="Dashboard: race countdown, season phases, this week's progress and upcoming sessions">
@@ -52,12 +53,28 @@ calendar and sent to Apple Watch as structured workouts through WorkoutKit.
 folder in your own Google Drive, for other tools to read. The format is a fixed contract,
 documented in [`docs/data-contract.md`](docs/data-contract.md).
 
+**Apple Watch companion.** Today's sessions, phase and week, recovery, and complications for the
+next session and race countdown. Start a session straight into the Workout app, rate how a workout
+felt with the Digital Crown, and get fuel reminders on long sessions and race day.
+
+**Bring your own devices.** Import FIT files from Garmin, Wahoo, Hammerhead or any bike computer.
+A session that's also in Apple Health counts once. Only totals are kept, never the route.
+
+**Fitness, fatigue and form.** The CTL/ATL/TSB training-load model, computed from your workouts,
+on the dashboard and in what the coach sees, always labelled with how it was estimated.
+
+**Race-day plan.** Pacing for each leg from your FTP and threshold heart rate, and a fuelling
+timeline built from what you practised in training, on the phone and on your wrist.
+
+**Your data, your call.** Export everything the app stored as one JSON file, or delete all of it
+from your phone and Watch in one step.
+
 **Demo mode.** Fills the app with generated data so it can be shown without an Apple Watch or any
 Health history. Demo data never reaches Drive, and the coach is told the numbers are not real.
 
 ## Architecture
 
-SwiftUI, iOS 18+, iPhone only. One Swift package dependency:
+SwiftUI, iOS 18+ and watchOS 11+. One Swift package dependency:
 [GoogleSignIn-iOS](https://github.com/google/GoogleSignIn-iOS). No analytics or crash reporting.
 
 ```
@@ -68,11 +85,19 @@ CoachBridge/
   Drive/    Google sign-in (drive.file scope), Drive REST client, daily exporter
   Coach/    LLM clients, prompt construction, observable models, calendar and Watch sync
   App/      SwiftUI views, theme and palette
+Shared/     The only code the phone and Watch share: the snapshot and feel-report values
+Watch/      The watchOS app: shows the phone's snapshot, sends back how workouts felt
+WatchWidgets/  Complications (next session, race countdown)
 ```
 
-**Data sources.** Everything the app reads comes through the `HealthSource` protocol. Apple Health
-is the first implementation; other sources, such as FIT file import, plug in as further
-conformances without changes to the rest of the app.
+**Phone and Watch.** The phone is the source of truth. It sends the Watch a small, versioned
+snapshot over WatchConnectivity; the Watch never reads Health, computes a plan or calls an LLM.
+Feel ratings come back as queued messages that the phone validates before saving.
+
+**Data sources.** Everything the app reads comes through the `HealthSource` protocol.
+`CombinedSource` merges Apple Health with imported FIT workouts through `WorkoutReconciler`, so
+the same session from two sources counts once. Each workout records its origin, and HRV is labelled
+with its method (Apple's SDNN isn't comparable with the RMSSD other devices report).
 
 **Plan pipeline.**
 
@@ -102,7 +127,16 @@ Health data is sensitive. These are design constraints, and the code is built to
 - **Explicit sharing.** The coach receives a health summary only when "Share my Health summary" is
   on. The exact prompt can be viewed from the chat screen.
 - **Untrusted input is sanitised.** Anything typed into a session is length-capped and stripped
-  of control characters before it reaches the model prompt, the calendar or the Watch.
+  of control characters before it reaches the model prompt, the calendar or the Watch. FIT files
+  are parsed defensively (size and message caps, bounds checks, CRC verification) and fuzz-tested.
+  Reports from the Watch are validated before they're saved.
+- **Minimal data from other devices.** FIT imports keep session totals only: routes, GPS positions
+  and per-second records are never stored, nor is the file.
+- **Watch faces show no health data.** Complications draw on a locked watch, so they read a
+  separate cache holding only the next session and race countdown.
+- **Export and delete.** Everything the app stored can be exported as JSON or deleted from the
+  phone and Watch in one step (Settings → Your data). See the draft
+  [privacy policy](docs/PRIVACY.md).
 - **No third-party analytics.** The only services contacted are Google Drive, your LLM provider
   and the weather service.
 
@@ -149,6 +183,9 @@ open CoachBridge.xcodeproj
 
 The app builds and runs with placeholder Google values; only Drive sign-in is unavailable.
 
+The Watch app and its complications share an App Group, `group.<BUNDLE_ID_PREFIX>.CoachBridge`.
+With automatic signing, Xcode registers it on the first signed build to a device.
+
 ### Google Drive export (optional)
 
 1. In the [Google Cloud console](https://console.cloud.google.com), create a project and enable the
@@ -179,9 +216,10 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 184 tests and runs in about a second. It covers the data contract, the plan engine
-(swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display, and
-demo-mode isolation using a fake `HealthSource`. Any installed iPhone simulator works.
+The suite has 245 tests and runs in about two seconds. It covers the data contract, the plan engine
+(swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
+demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
+source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
 
 ### Running in the simulator without Health data
 
@@ -202,7 +240,7 @@ xcrun simctl launch <simulator-udid> <bundle-id> -demo.enabled YES -onboarding.c
 
 ## Project status
 
-Personal project in active development, currently **v2.8.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.9.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the
@@ -210,11 +248,15 @@ plan calendar, calendar sync and weather.
 
 Not yet verified:
 
+- The Watch app on a real Apple Watch; answering "How did it feel?" on the Watch, complications on a
+  face, and fuel reminders during a Workout app session. The phone-to-Watch snapshot is verified in
+  paired simulators.
+- A FIT file from a real device (the parser is tested against generated files)
 - Apple Calendar phase banners and WorkoutKit sync since the v2.0 plan rewrite
 - The OpenAI provider; the hosted-server client is a stub
 - Coaching quality: the plan engine is tested for structure, not for whether its weeks are good
   training, and the workout-review prompt hasn't yet been run against a live model
-- A privacy policy, which is required before external TestFlight testing
+- The privacy policy is a draft and needs review before external TestFlight testing
 
 App Store guideline 5.1.3 restricts sharing HealthKit data with third parties. A public release
 would need explicit consent flows for the LLM and Drive features.
@@ -225,5 +267,6 @@ would need explicit consent flows for the LLM and Drive features.
 |---|---|
 | [`CHANGELOG.md`](CHANGELOG.md) | Development history: what changed in each version, and why |
 | [`docs/data-contract.md`](docs/data-contract.md) | The daily JSON export format (fixed; external consumers depend on it) |
+| [`docs/PRIVACY.md`](docs/PRIVACY.md) | Draft privacy policy, written from what the app actually does |
 | [`AGENT-HANDOFF.md`](AGENT-HANDOFF.md) | In-depth architecture, invariants and project context for contributors |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed working rules for AI coding agents |
