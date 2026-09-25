@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             BackgroundExport.registerRefreshTask()
             BackgroundExport.startObservers(store: AppServices.shared.health.store)
             BackgroundExport.scheduleRefresh()
+            // Before launch finishes too: a feel answered on the watch can be what woke the app.
+            AppServices.shared.watchLink.activate()
         }
         return true
     }
@@ -53,6 +55,10 @@ struct CoachBridgeApp: App {
             switch phase {
             case .active:
                 Task { await exporter.runAutomatic(trigger: .appOpen) }
+                Task {
+                    await dashboard.ensureLoaded()
+                    AppServices.shared.watchLink.push()
+                }
             case .background:
                 BackgroundExport.scheduleRefresh()
             default:

@@ -4,6 +4,9 @@ import Foundation
 /// How the session actually felt, in the athlete's own words and numbers. Asked once after every
 /// recorded workout, because the numbers don't say whether 140 bpm was easy that day or a fight.
 struct WorkoutFeel: Codable, Hashable, Sendable {
+    /// How long after a workout the app asks how it felt, on the phone and on the watch. A guess.
+    static let askWindow: TimeInterval = 48 * 3600
+
     /// Borg CR10 perceived exertion. 1 is barely moving, 10 is everything you had.
     var rpe: Int
     var mood: Mood

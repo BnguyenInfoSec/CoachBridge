@@ -338,6 +338,7 @@ struct WorkoutDetailView: View {
                 let first = review.save(feel: feel, for: summary, dateISO: plan.engine.iso(summary.start))
                 // Changing an earlier answer invalidates the note that was written from it.
                 if !first { review.clearNote(for: summary.id) }
+                AppServices.shared.watchLink.push()        // it's no longer waiting on the watch
                 Task { await askCoach(force: !first) }
             }
         }
@@ -400,7 +401,7 @@ struct WorkoutDetailView: View {
         guard !offeredFeel else { return }
         offeredFeel = true
         guard review.feel(for: summary.id) == nil,
-              Date.now.timeIntervalSince(summary.start) < 48 * 3600 else { return }
+              Date.now.timeIntervalSince(summary.start) < WorkoutFeel.askWindow else { return }
         showFeel = true
     }
 

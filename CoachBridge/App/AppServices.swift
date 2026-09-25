@@ -19,6 +19,7 @@ final class AppServices {
     let watch: WatchScheduler
     let venues: VenueStore
     let review: ReviewModel
+    let watchLink: WatchLink
 
     private init() {
         health = HealthAuthorizer()
@@ -33,6 +34,7 @@ final class AppServices {
         watch = WatchScheduler()
         venues = VenueStore()
         review = ReviewModel()
+        watchLink = WatchLink()
     }
 
     /// Demo mode was turned on or off. Everything derived from Health has to be dropped and
@@ -46,11 +48,13 @@ final class AppServices {
         let today = Calendar.current.startOfDay(for: .now)
         await plan.loadWorkouts(from: Calendar.current.date(byAdding: .day, value: -45, to: today)!,
                                 to: Calendar.current.date(byAdding: .day, value: 45, to: today)!)
+        watchLink.push()        // the watch must switch to (or away from) demo data too
     }
 
     /// Places sessions (calendar), then mirrors them to the Watch. One place to call after anything changes.
     func syncSchedule() async {
         await calendar.sync(plan: plan, weather: weather)
         await watch.sync(plan: plan, calendar: calendar)
+        watchLink.push()
     }
 }
