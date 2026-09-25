@@ -31,6 +31,9 @@ struct SettingsView: View {
     @State private var fitMessage: String?
     @State private var confirmRemoveFIT = false
     @State private var exportFile: ExportFile?
+    /// Kept apart from `exportFile`: SwiftUI clears the sheet's item before onDismiss runs,
+    /// so reading it there found nothing and the export stayed in tmp.
+    @State private var exportedURL: URL?
     @State private var exportError: String?
     @State private var confirmDelete = false
     @State private var deleted = false
@@ -154,7 +157,13 @@ struct SettingsView: View {
 
                 Section {
                     Button {
-                        do { exportFile = ExportFile(url: try PersonalData.export()) } catch { exportError = error.localizedDescription }
+                        do {
+                            let url = try PersonalData.export()
+                            exportedURL = url
+                            exportFile = ExportFile(url: url)
+                        } catch {
+                            exportError = error.localizedDescription
+                        }
                     } label: {
                         Label("Export my data", systemImage: "square.and.arrow.up")
                     }
@@ -186,7 +195,8 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
             .sheet(item: $exportFile, onDismiss: {
                 // The export holds everything; don't leave a copy lying in tmp.
-                if let url = exportFile?.url { try? FileManager.default.removeItem(at: url) }
+                if let url = exportedURL { try? FileManager.default.removeItem(at: url) }
+                exportedURL = nil
             }) { file in
                 ShareSheet(items: [file.url])
             }

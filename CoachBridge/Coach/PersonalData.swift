@@ -22,6 +22,7 @@ enum PersonalData {
     /// are never included. Written to a temporary file with complete protection, for the share
     /// sheet; the caller deletes it afterwards.
     static func export(now: Date = .now) throws -> URL {
+        removeLeftoverExports()
         var files: [String: Any] = [:]
         var photos: [String] = []
         let fm = FileManager.default
@@ -56,6 +57,15 @@ enum PersonalData {
         try data.write(to: url, options: [.atomic, .completeFileProtection])
         log.info("Exported \(files.count, privacy: .public) files, \(settings.count, privacy: .public) settings")
         return url
+    }
+
+    /// An export left behind if the app was closed with the share sheet open.
+    static func removeLeftoverExports() {
+        let fm = FileManager.default
+        for url in (try? fm.contentsOfDirectory(at: fm.temporaryDirectory, includingPropertiesForKeys: nil)) ?? []
+        where url.lastPathComponent.hasPrefix("coach-bridge-export-") {
+            try? fm.removeItem(at: url)
+        }
     }
 
     /// Settings as JSON values: dates as ISO strings, stored JSON decoded in place, other data

@@ -11,6 +11,14 @@ final class PersonalDataTests: XCTestCase {
         Keychain.delete(account: "export-test-account")
     }
 
+    func testAnOldExportLeftInTmpIsRemovedByTheNextOne() throws {
+        let stale = FileManager.default.temporaryDirectory.appendingPathComponent("coach-bridge-export-2020-01-01.json")
+        try Data("{}".utf8).write(to: stale)
+        let url = try PersonalData.export()
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: stale.path))
+    }
+
     func testExportHasYourFilesAndSettingsButNeverKeys() throws {
         let fm = FileManager.default
         try fm.createDirectory(at: PersonalData.supportDir, withIntermediateDirectories: true)
