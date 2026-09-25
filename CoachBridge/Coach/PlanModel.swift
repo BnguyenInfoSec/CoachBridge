@@ -80,10 +80,13 @@ final class PlanModel: ObservableObject {
         let rx = prescriber
         let original = e.sessions(on: d).map { rx.prescribe($0, on: d) }
         let change = chatDays[iso] ?? update?.days[iso]
+        let mine = custom.forDay(iso)
         var sessions = (change?.sessions.map { merged($0, on: d, rx: rx) } ?? original)
             .filter { !$0.addedByAthlete }
+        // A planned session the athlete edited is now one of theirs; drop the original.
+        sessions = CustomSession.remaining(planned: sessions, replacedBy: mine)
         // The athlete's own sessions always stand, exactly as entered.
-        sessions += custom.forDay(iso).map { merged($0.planSession(), on: d, rx: rx) }
+        sessions += mine.map { merged($0.planSession(), on: d, rx: rx) }
         return DayPlan(date: d, iso: iso, sessions: sessions, original: original, change: change,
                        milestones: e.milestones(on: d), done: workoutsByDay[iso] ?? [])
     }

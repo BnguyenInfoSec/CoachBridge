@@ -14,18 +14,103 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
     var title: String
     var notes: String = ""
     var createdAt: Date = .now
+    /// Targets the athlete typed in. Anything left nil is filled from the plan's own rules.
+    /// Optional, like the two below, so files written before v2.8 still decode.
+    var rx: Prescription? = nil
+    var indoor: Bool? = nil
+    /// Set when this began as a planned session the athlete edited: that day's first planned
+    /// session of this kind is hidden, so the edit replaces it instead of doubling the day.
+    var replaces: SessionKind? = nil
+
+    /// Longest text kept per field. All of it is typed by the athlete and then sent to Claude
+    /// and written to the calendar, so it's capped rather than trusted.
+    static let maxTitle = 120
+    static let maxNotes = 1_000
+    static let maxTarget = 80
+    static let durationRange = 5...720
 
     func planSession() -> PlanSession {
-        PlanSession(kind: kind, title: title, detail: notes,
-                    rx: Prescription(durationMin: durationMin),
-                    startTime: startTime, customID: id)
+        var r = rx ?? Prescription()
+        r.durationMin = durationMin
+        return PlanSession(kind: kind, title: title, detail: notes, rx: r,
+                           startTime: startTime, customID: id, indoor: indoor)
     }
 
     /// One line for Claude.
     func line() -> String {
         var s = "\(date) \(startTime) · \(kind.rawValue) · \(title) · \(durationMin) min"
+        let targets = [rx?.distance, rx?.intensity, rx?.heartRate, rx?.power, rx?.pace].compactMap { $0 }
+        if !targets.isEmpty { s += " · \(targets.joined(separator: ", "))" }
+        if indoor == true { s += " · indoor" }
         if !notes.isEmpty { s += " · \(notes.prefix(200))" }
         return s
+    }
+
+    /// A planned session the athlete starts editing becomes theirs: same content, now fixed,
+    /// hiding the planned original. `startTime` is where the calendar placed it, if anywhere.
+    static func adopting(_ s: PlanSession, on iso: String, startTime: String?) -> CustomSession {
+        var c = CustomSession(date: iso, startTime: startTime ?? s.startTime ?? "06:00",
+                              durationMin: s.rx?.durationMin ?? 45, kind: s.kind,
+                              title: s.title, notes: s.detail)
+        c.rx = s.rx
+        c.indoor = s.indoor
+        c.replaces = s.kind
+        return c.sanitized()
+    }
+
+    /// Clamps every field to something sane. Applied on every save: the values come from text
+    /// fields and end up in Claude's prompt, the calendar and the Watch.
+    func sanitized() -> CustomSession {
+        var c = self
+        c.title = Self.oneLine(title, max: Self.maxTitle)
+        if c.title.isEmpty { c.title = kind.label }
+        c.notes = Self.clean(notes, max: Self.maxNotes)
+        c.durationMin = min(max(durationMin, Self.durationRange.lowerBound), Self.durationRange.upperBound)
+        if !Self.isTime(startTime) { c.startTime = "06:00" }
+        if var r = rx {
+            func target(_ t: String?) -> String? {
+                let v = t.map { Self.oneLine($0, max: Self.maxTarget) } ?? ""
+                return v.isEmpty ? nil : v
+            }
+            r.durationMin = nil        // `durationMin` on the session is the one source of truth
+            r.distance = target(r.distance)
+            r.intensity = target(r.intensity)
+            r.heartRate = target(r.heartRate)
+            r.power = target(r.power)
+            r.pace = target(r.pace)
+            c.rx = r
+        }
+        return c
+    }
+
+    /// Drops control characters (keeping line breaks), trims, and caps the length.
+    static func clean(_ t: String, max: Int) -> String {
+        let kept = t.unicodeScalars.filter { $0 == "\n" || !CharacterSet.controlCharacters.contains($0) }
+        return String(String(String.UnicodeScalarView(kept))
+            .trimmingCharacters(in: .whitespacesAndNewlines).prefix(max))
+    }
+
+    /// `clean`, with line breaks turned into spaces — for titles and targets.
+    static func oneLine(_ t: String, max: Int) -> String {
+        clean(t.replacingOccurrences(of: "\n", with: " "), max: max)
+    }
+
+    /// "HH:mm", 00:00–23:59.
+    static func isTime(_ t: String) -> Bool {
+        let p = t.split(separator: ":", omittingEmptySubsequences: false)
+        guard p.count == 2, p[0].count == 2, p[1].count == 2,
+              let h = Int(p[0]), let m = Int(p[1]) else { return false }
+        return (0...23).contains(h) && (0...59).contains(m)
+    }
+
+    /// The day's planned sessions minus the ones the athlete took over: for each of their
+    /// sessions that replaces a kind, the first remaining planned session of that kind.
+    static func remaining(planned: [PlanSession], replacedBy mine: [CustomSession]) -> [PlanSession] {
+        var out = planned
+        for kind in mine.compactMap(\.replaces) {
+            if let i = out.firstIndex(where: { $0.kind == kind && !$0.addedByAthlete }) { out.remove(at: i) }
+        }
+        return out
     }
 }
 
@@ -50,6 +135,7 @@ final class CustomSessionStore: ObservableObject {
     }
 
     func save(_ s: CustomSession) {
+        let s = s.sanitized()
         if let i = sessions.firstIndex(where: { $0.id == s.id }) { sessions[i] = s } else { sessions.append(s) }
         persist()
     }
