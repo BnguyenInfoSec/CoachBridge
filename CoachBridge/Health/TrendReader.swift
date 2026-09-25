@@ -128,6 +128,7 @@ final class TrendReader {
         case .pilates: return "Pilates"
         case .yoga: return "Yoga"
         case .tennis: return "Tennis"
+        case .golf: return "Golf"
         case .coreTraining: return "Core"
         case .swimBikeRun: return "Multisport"
         case .highIntensityIntervalTraining: return "HIIT"

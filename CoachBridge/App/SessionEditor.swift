@@ -10,7 +10,7 @@ struct SessionFields: View {
     let defaults: Prescription?
     let calendar: Calendar
 
-    static let kinds: [SessionKind] = [.run, .bike, .swim, .lift, .flex, .fun]
+    static let kinds: [SessionKind] = [.run, .bike, .swim, .lift, .golf, .flex, .fun]
 
     var body: some View {
         Section {

@@ -63,8 +63,12 @@ enum VenueSlot {
     static let lift = "lift"
     static let snow = "snow"
     static let fun = "fun"
+    static let golf = "golf"
 
-    static let all = [run, bike, bikeIndoor, swim, lift, snow, fun]
+    static let all = [run, bike, bikeIndoor, swim, lift, golf, snow, fun]
+    /// Slots that ship with an illustrated place. Golf has no artwork yet: until the athlete adds
+    /// a photo of their course it shows the sport-colored gradient with the golf figure.
+    static let seeded = all.filter { $0 != golf }
 
     /// nil for rest and optional days, which stay plain.
     static func key(for session: PlanSession) -> String? {
@@ -75,6 +79,7 @@ enum VenueSlot {
         case .lift: return lift
         case .snow: return snow
         case .fun: return fun
+        case .golf: return golf
         case .rest, .flex: return nil
         }
     }
@@ -94,6 +99,7 @@ enum VenueSlot {
         case lift: return "Lift"
         case snow: return "Snowboard"
         case fun: return "Events"
+        case golf: return "Golf"
         default: return slot.capitalized
         }
     }
@@ -107,6 +113,7 @@ enum VenueSlot {
         case lift: return "dumbbell.fill"
         case snow: return "figure.snowboarding"
         case fun: return "party.popper.fill"
+        case golf: return "figure.golf"
         default: return "mappin.and.ellipse"
         }
     }
@@ -119,6 +126,7 @@ enum VenueSlot {
         case swim: return .swim
         case lift: return .lift
         case snow: return .snow
+        case golf: return .golf
         default: return .fun
         }
     }

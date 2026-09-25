@@ -5,6 +5,9 @@ import Foundation
 
 enum SessionKind: String, Codable, CaseIterable, Sendable {
     case swim, bike, run, lift, rest, flex, snow, fun
+    /// A round of golf: something the athlete adds, never generated. Walking 18 holes is a few
+    /// hours on your feet, so it counts toward the week's load like any other session.
+    case golf
 
     var symbol: String {
         switch self {
@@ -16,6 +19,7 @@ enum SessionKind: String, Codable, CaseIterable, Sendable {
         case .flex: return "sparkles"
         case .snow: return "figure.snowboarding"
         case .fun: return "party.popper.fill"
+        case .golf: return "figure.golf"
         }
     }
 
@@ -29,6 +33,7 @@ enum SessionKind: String, Codable, CaseIterable, Sendable {
         case .flex: return "Optional"
         case .snow: return "Snowboard"
         case .fun: return "Event"
+        case .golf: return "Golf"
         }
     }
 }

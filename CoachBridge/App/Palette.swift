@@ -77,6 +77,7 @@ enum Palette {
         case .run: return series3
         case .lift: return series5
         case .snow, .fun: return series7
+        case .golf: return series4          // matches Sport.other, which is how Health files a golf round
         case .rest, .flex: return neutral
         }
     }

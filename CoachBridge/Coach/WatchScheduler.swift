@@ -106,6 +106,7 @@ final class WatchScheduler: ObservableObject {
             if t.contains("run") { return (.running, .outdoor) }
             if t.contains("spin") || t.contains("ride") { return (.cycling, .outdoor) }
             return nil
+        case .golf: return (.golf, .outdoor)
         case .rest, .snow, .fun:
             return nil
         }
@@ -115,6 +116,13 @@ final class WatchScheduler: ObservableObject {
         guard let mapped = mapping(for: s) else { return nil }
         let (activity, location) = mapped
         let minutes = Double(max(15, s.rx?.durationMin ?? 45))
+
+        // Golf: an open goal. A round takes as long as it takes, and a countdown to "done" would
+        // go off on the 14th green.
+        if activity == .golf {
+            guard SingleGoalWorkout.supportsGoal(.open, activity: activity, location: location) else { return nil }
+            return .goal(SingleGoalWorkout(activity: activity, location: location, goal: .open))
+        }
 
         // Swims and lifts: a simple time goal.
         if activity == .swimming || activity == .traditionalStrengthTraining || !CustomWorkout.supportsActivity(activity) {

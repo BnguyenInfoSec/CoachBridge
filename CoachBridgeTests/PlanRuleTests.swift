@@ -244,7 +244,9 @@ final class VenueTests: XCTestCase {
 
     func testSeedCoversEverySlotThatNeedsOne() {
         let slots = Set(VenueStore.seed.map(\.slot))
-        for s in VenueSlot.all { XCTAssertTrue(slots.contains(s), "no seed venue for \(s)") }
+        for s in VenueSlot.seeded { XCTAssertTrue(slots.contains(s), "no seed venue for \(s)") }
+        XCTAssertEqual(Set(VenueSlot.all).subtracting(VenueSlot.seeded), [VenueSlot.golf],
+                       "only golf may ship without a place; it falls back to its gradient")
     }
 
     func testEverySeededPlaceShipsWithArtwork() {
