@@ -27,6 +27,7 @@ struct DashboardView: View {
                         UpNextCard(days: upcoming, today: today)
                     }
                     if let d = dashboard.data {
+                        if let load = d.load, !load.points.isEmpty { FitnessCard(load: load) }
                         WeeklyLoadCard(loads: d.weekly, ignored: d.ignoredLongSessions)
                     }
 
@@ -259,6 +260,45 @@ private struct UpNextCard: View {
             : item.day.date.formatted(.dateTime.weekday(.wide))
         guard let slot = item.slot else { return day }
         return "\(day) · \(slot.start.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+/// Fitness, fatigue and form over six weeks, with today's form in words.
+private struct FitnessCard: View {
+    let load: TrainingLoad.Summary
+
+    var body: some View {
+        let today = load.today
+        Card("Fitness & form", icon: "chart.line.uptrend.xyaxis", tint: Palette.series3) {
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                stat("Fitness", today?.fitness, Palette.series1)
+                stat("Fatigue", today?.fatigue, Palette.series5)
+                stat("Form", today?.form, Palette.series3, signed: true)
+                Spacer(minLength: 0)
+            }
+            Text(load.formLabel).font(.subheadline.weight(.semibold))
+            Chart(load.points) { p in
+                LineMark(x: .value("Day", p.day), y: .value("Load", p.fitness), series: .value("", "Fitness"))
+                    .foregroundStyle(Palette.series1)
+                LineMark(x: .value("Day", p.day), y: .value("Load", p.fatigue), series: .value("", "Fatigue"))
+                    .foregroundStyle(Palette.series5.opacity(0.8))
+            }
+            .chartLegend(.hidden)
+            .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
+            .frame(height: 120)
+            .accessibilityLabel("Fitness and fatigue over six weeks")
+            Text("Fitness is your 6-week training load, fatigue the last week's; form is the difference going into today. Estimated \(load.method.label).")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func stat(_ label: String, _ v: Double?, _ color: Color, signed: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(v.map { signed ? String(format: "%+.0f", $0) : String(format: "%.0f", $0) } ?? "—")
+                .font(.title3.bold().monospacedDigit()).foregroundStyle(color)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

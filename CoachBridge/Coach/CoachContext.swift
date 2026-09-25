@@ -168,6 +168,9 @@ enum CoachContext {
         if !d.rhr.isEmpty {
             lines.append("Resting HR by day, oldest to newest (bpm): " + d.rhr.suffix(14).map { "\(Int($0.value.rounded()))" }.joined(separator: ", "))
         }
+        if let t = d.load?.today, let load = d.load {
+            lines.append("Training load (estimated \(load.method.label)): fitness (CTL) \(Int(t.fitness.rounded())), fatigue (ATL) \(Int(t.fatigue.rounded())), form (TSB) \(Int(t.form.rounded())) — \(load.formLabel.lowercased()).")
+        }
         if !d.hrv.isEmpty {
             lines.append("HRV (\(d.hrvMethod.label)) daily mean, mostly daytime readings, oldest to newest (ms): " + d.hrv.suffix(14).map { "\(Int($0.value.rounded()))" }.joined(separator: ", "))
             if d.hrvMethod == .sdnn {

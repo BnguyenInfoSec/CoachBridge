@@ -15,6 +15,8 @@ struct DashboardData: Sendable {
     /// Apple Health's HRV is SDNN. Carried with the numbers so nothing downstream — the coach
     /// above all — reads them against RMSSD norms from Whoop, Garmin or Oura.
     var hrvMethod: HRVMethod = .sdnn
+    /// Fitness, fatigue and form over recent weeks; filled in by DashboardModel.
+    var load: TrainingLoad.Summary? = nil
 }
 
 /// Reads the trend data behind the phone dashboard. Everything stays in memory.

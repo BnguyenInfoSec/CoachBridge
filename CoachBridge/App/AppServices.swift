@@ -31,6 +31,7 @@ final class AppServices {
         dashboard = DashboardModel(source: source)
         chat = ChatModel()
         plan = PlanModel(source: source)
+        dashboard.lthr = { [unowned plan] in plan.settings.lthrBpm }
         calendar = CalendarSync()
         weather = WeatherModel()
         watch = WatchScheduler()

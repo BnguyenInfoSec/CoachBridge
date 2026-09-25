@@ -18,7 +18,22 @@ final class DashboardModel: ObservableObject {
     /// is discarded instead of overwriting the demo numbers.
     private var generation = 0
 
+    /// Threshold heart rate for training stress; the plan settings own it.
+    var lthr: () -> Int? = { nil }
+
     init(source: any HealthSource) { self.source = source }
+
+    /// Six weeks of fitness, fatigue and form, from 90 days of workouts so the averages settle.
+    private func load(now: Date, demo: Bool) async -> TrainingLoad.Summary? {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let from = cal.date(byAdding: .day, value: -(TrainingLoad.warmupDays + 42), to: today)!
+        let to = cal.date(byAdding: .day, value: 1, to: today)!
+        let list = demo ? DemoData.workouts(from: from, to: to, calendar: cal)
+                        : ((try? await source.workouts(from: from, to: to)) ?? [])
+        return TrainingLoad.summary(list, lthr: lthr(), from: cal.date(byAdding: .day, value: -41, to: today)!,
+                                    to: today, calendar: cal)
+    }
 
     /// `force` runs even when a load is already in flight — used when demo mode flips, where
     /// waiting for the old load would mean showing the wrong data in the meantime.
@@ -30,13 +45,17 @@ final class DashboardModel: ObservableObject {
         defer { if token == generation { isLoading = false } }
 
         if DemoData.isOn {
-            data = DemoData.dashboard()
+            var demo = DemoData.dashboard()
+            demo.load = await load(now: .now, demo: true)
+            guard token == generation else { return }
+            data = demo
             loadedInDemoMode = true
             errorText = nil
             return
         }
         do {
-            let loaded = try await source.dashboard(now: .now)
+            var loaded = try await source.dashboard(now: .now)
+            loaded.load = await load(now: .now, demo: false)
             guard token == generation else { return }     // demo mode flipped while we were reading
             data = loaded
             loadedInDemoMode = false
