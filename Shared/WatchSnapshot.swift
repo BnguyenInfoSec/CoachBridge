@@ -30,6 +30,22 @@ struct WatchSnapshot: Codable, Equatable, Sendable {
     var sessions: [Session]
     /// Recently finished workouts with no feel answer yet.
     var awaitingFeel: [Workout]
+    /// Pacing and fuelling, sent the day before the race and on race morning. Optional, so a
+    /// snapshot without it still decodes.
+    var race: Race? = nil
+
+    struct Race: Codable, Equatable, Sendable {
+        var name: String
+        var legs: [RaceLeg]
+        var fuel: [FuelCue]
+    }
+
+    struct RaceLeg: Codable, Equatable, Sendable, Identifiable {
+        var label: String
+        var target: String
+        var cue: String
+        var id: String { label }
+    }
 
     struct Phase: Codable, Equatable, Sendable {
         var id: String
@@ -111,6 +127,20 @@ struct WatchSnapshot: Codable, Equatable, Sendable {
         return WatchGlance(generatedAt: generatedAt, isDemo: isDemo, raceName: raceName, daysToRace: daysToRace,
                            phaseLabel: phase?.label, nextTitle: next?.title, nextSymbol: next?.symbol,
                            nextStart: next?.start, nextMinutes: next?.minutes)
+    }
+}
+
+/// One "eat now" moment: minutes from the start, and what to take.
+struct FuelCue: Codable, Equatable, Sendable, Identifiable {
+    var at: Int
+    var text: String
+    var id: String { "\(at)-\(text)" }
+
+    /// For a long training session: every 20 minutes from 20 in, stopping 10 minutes before the
+    /// end. Sessions under 75 minutes don't need fuelling reminders.
+    static func every20(minutes: Int, text: String) -> [FuelCue] {
+        guard minutes >= 75 else { return [] }
+        return stride(from: 20, to: minutes - 10, by: 20).map { FuelCue(at: $0, text: text) }
     }
 }
 

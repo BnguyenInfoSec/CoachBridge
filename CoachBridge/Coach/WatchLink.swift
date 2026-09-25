@@ -89,6 +89,17 @@ final class WatchLink: NSObject, ObservableObject {
 
         let pw = e.phaseWeek(today)
         let named = e.blueprint.hasEvent || !e.profile.eventName.isEmpty
+        // Race pacing and fuelling, from the day before: the watch has it on race morning even
+        // if the phone never wakes.
+        let raceDays = e.daysToRace(from: today)
+        let race: WatchSnapshot.Race? = (!plan.needsSetup && e.blueprint.hasEvent && raceDays <= 1)
+            ? RaceDayPlan.make(event: e.profile.eventKind, raceName: e.raceName,
+                               ftp: e.settings.ftpWatts, lthr: e.settings.lthrBpm).map { r in
+                WatchSnapshot.Race(name: r.raceName,
+                                   legs: r.legs.map { .init(label: $0.label, target: $0.target, cue: $0.cue) },
+                                   fuel: r.fuel.map { FuelCue(at: $0.at, text: "\($0.leg): \($0.text)") })
+            }
+            : nil
         return WatchSnapshot(
             generatedAt: now, isDemo: isDemo,
             raceName: plan.needsSetup ? nil : (named ? e.raceName : nil),
@@ -102,7 +113,8 @@ final class WatchLink: NSObject, ObservableObject {
                       reasons: $0.recovery.reasons)
             },
             sessions: plan.needsSetup ? [] : sessions,
-            awaitingFeel: Array(awaiting))
+            awaitingFeel: Array(awaiting),
+            race: race)
     }
 
     private static func symbol(for sport: Sport) -> String {

@@ -18,6 +18,7 @@ struct CoachBridgeWatchApp: App {
 
 struct WatchHomeView: View {
     @EnvironmentObject private var model: WatchModel
+    @ObservedObject private var fuelTimer = FuelTimer.shared
 
     var body: some View {
         if let s = model.snapshot {
@@ -33,8 +34,18 @@ struct WatchHomeView: View {
         let todays = s.sessions.filter { $0.dateISO == today }
         let later = s.sessions.filter { $0.dateISO > today }.prefix(4)
         return List {
-            if s.phase != nil || s.daysToRace != nil {
+            if let race = s.race {
+                Section {
+                    NavigationLink { RaceView(race: race) } label: {
+                        Label("Race day: \(race.name)", systemImage: "flag.checkered").font(.headline)
+                    }
+                }
+            } else if s.phase != nil || s.daysToRace != nil {
                 Section { SeasonRow(snapshot: s) }
+            }
+
+            if fuelTimer.startedAt != nil {
+                Section { FuelTimerRow() }
             }
 
             if !model.awaitingFeel.isEmpty {
@@ -209,7 +220,12 @@ struct WatchSessionView: View {
             }
 
             if let fuel = session.fuelDuring {
-                Section("Fuel during") { Text(fuel).font(.caption) }
+                Section("Fuel during") {
+                    Text(fuel).font(.caption)
+                    let cues = FuelCue.every20(minutes: session.minutes ?? 0,
+                                               text: String(fuel.split(separator: "—").first ?? Substring(fuel)))
+                    if !cues.isEmpty { FuelTimerButton(title: session.title, cues: cues) }
+                }
             }
         }
         .navigationTitle(session.start?.formatted(date: .omitted, time: .shortened) ?? "Session")
@@ -339,6 +355,75 @@ struct FeelView: View {
         case 8: return "Very hard — holding on"
         case 9: return "Near maximal"
         default: return "All out"
+        }
+    }
+}
+
+// MARK: - Race day
+
+struct RaceView: View {
+    let race: WatchSnapshot.Race
+
+    var body: some View {
+        List {
+            Section { FuelTimerButton(title: race.name, cues: race.fuel) }
+            ForEach(race.legs) { leg in
+                Section(leg.label) {
+                    Text(leg.target).font(.caption.weight(.semibold))
+                    Text(leg.cue).font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            Section("Fuel") {
+                ForEach(race.fuel) { cue in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(cue.at < 0 ? "−\(-cue.at / 60):\(String(format: "%02d", -cue.at % 60))"
+                                        : "\(cue.at / 60):\(String(format: "%02d", cue.at % 60))")
+                            .font(.caption.monospacedDigit().bold())
+                            .frame(width: 40, alignment: .leading)
+                        Text(cue.text).font(.caption2)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Race day")
+    }
+}
+
+// MARK: - Fuel timer
+
+/// Start at the gun, or at the start of a long session.
+struct FuelTimerButton: View {
+    @ObservedObject private var timer = FuelTimer.shared
+    let title: String
+    let cues: [FuelCue]
+
+    var body: some View {
+        if timer.title == title, timer.startedAt != nil {
+            FuelTimerRow()
+        } else {
+            Button {
+                Task { await timer.start(title, cues: cues) }
+            } label: {
+                Label("Start fuel timer", systemImage: "timer")
+            }
+            .tint(.orange)
+            if let e = timer.errorText { Text(e).font(.caption2).foregroundStyle(.secondary) }
+        }
+    }
+}
+
+struct FuelTimerRow: View {
+    @ObservedObject private var timer = FuelTimer.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let next = timer.nextCue {
+                Text("Next fuel ") + Text(next.date, style: .relative).monospacedDigit()
+                Text(next.cue.text).font(.caption2).foregroundStyle(.secondary)
+            } else {
+                Text("Fuel timer finished").font(.caption)
+            }
+            Button("Stop fuel timer", role: .destructive) { timer.stop() }
         }
     }
 }

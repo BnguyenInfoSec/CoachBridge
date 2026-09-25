@@ -130,6 +130,15 @@ private struct SeasonCard: View {
             if let pw = engine.phaseWeek(today) { PhaseChip(week: pw) }
             PhaseRibbon(engine: engine, date: today)
             Text(ph.focus).font(.subheadline).foregroundStyle(.secondary)
+            if named, let race = RaceDayPlan.make(event: engine.profile.eventKind, raceName: engine.raceName,
+                                                  ftp: engine.settings.ftpWatts, lthr: engine.settings.lthrBpm) {
+                NavigationLink {
+                    RaceDayView(plan: race)
+                } label: {
+                    Label("Race-day plan", systemImage: "flag.checkered")
+                        .font(.subheadline.weight(.semibold))
+                }
+            }
         }
     }
 }
