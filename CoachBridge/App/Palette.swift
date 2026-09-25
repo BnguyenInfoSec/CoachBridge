@@ -86,11 +86,12 @@ enum Palette {
     /// "swim week" next to the sport-colored session dots.
     static func color(forPhase id: String) -> Color {
         switch id {
-        case "rec": return Color(light: 0xa9c7ee, dark: 0x3b5a82)
-        case "b1": return Color(light: 0x6fa3e3, dark: 0x4f7fc0)
-        case "b2": return Color(light: 0x3d7fd4, dark: 0x5f93dc)
-        case "build": return Color(light: 0x1f5bb0, dark: 0x86b1ee)
-        case "taper": return Color(light: 0x8a7fd6, dark: 0x9d93e6)
+        // Spread wide enough to tell adjacent phases apart in a 5 pt stripe, in both schemes.
+        case "rec": return Color(light: 0x7fcbd9, dark: 0x4aa7b8)
+        case "b1": return Color(light: 0x3f9be0, dark: 0x3f95da)
+        case "b2": return Color(light: 0x2f63c8, dark: 0x6a8ff0)
+        case "build": return Color(light: 0x23307f, dark: 0xa9b8ff)
+        case "taper": return Color(light: 0x9a7be0, dark: 0xc3a8ff)
         default: return neutral
         }
     }

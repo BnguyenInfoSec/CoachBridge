@@ -41,6 +41,22 @@ final class PhaseDisplayTests: XCTestCase {
         XCTAssertEqual(e.phaseWeek(e.date(e.raceISO))?.phase.id, "taper", "race day is in the taper")
     }
 
+    /// Every day of one Monday–Sunday week says the same week number, even in a phase that
+    /// starts midweek — the header and the week view look at different days of the same week.
+    func testAllDaysOfACalendarWeekAgree() {
+        var p = AthleteProfile.ironmanCalifornia
+        p.startDateISO = "2026-09-18"          // a Friday, so the first phase starts midweek
+        let e = PlanEngine(profile: p, settings: PlanSettings(), calendar: cal)
+        var monday = e.monday(of: e.date(e.startISO))
+        while monday <= e.date(e.raceISO) {
+            let labels = Set((0..<7).map { e.add(monday, days: $0) }.compactMap { e.phaseWeek($0) }
+                .map { "\($0.phase.id) \($0.week)/\($0.weeks)" })
+            let phases = Set(labels.map { $0.split(separator: " ")[0] })
+            XCTAssertEqual(labels.count, phases.count, "week of \(e.iso(monday)): \(labels.sorted())")
+            monday = e.add(monday, days: 7)
+        }
+    }
+
     func testNothingOutsideThePlan() {
         let e = engine()
         XCTAssertNil(e.phaseWeek(e.add(e.date(e.startISO), days: -1)))

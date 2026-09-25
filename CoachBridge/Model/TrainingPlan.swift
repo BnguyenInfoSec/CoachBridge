@@ -135,10 +135,7 @@ struct PhaseBanner: Sendable, Equatable {
     }
 
     static func all(_ e: PlanEngine) -> [PhaseBanner] {
-        e.phases.map { p in
-            let days = (e.calendar.dateComponents([.day], from: e.date(p.start), to: e.date(p.end)).day ?? 0) + 1
-            return PhaseBanner(p, weeks: max(1, Int((Double(days) / 7).rounded(.up))))
-        }
+        e.phases.map { PhaseBanner($0, weeks: e.calendarWeeks($0)) }
     }
 }
 
@@ -245,13 +242,20 @@ struct PlanEngine: Sendable {
         let iso = iso(d)
         guard let i = phases.firstIndex(where: { iso >= $0.start && iso <= $0.end }) else { return nil }
         let p = phases[i]
-        let start = date(p.start)
-        let into = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: d)).day ?? 0
-        let length = (calendar.dateComponents([.day], from: start, to: date(p.end)).day ?? 0) + 1
         return PhaseWeek(phase: p, index: i,
-                         week: into / 7 + 1,
-                         weeks: max(1, Int((Double(length) / 7).rounded(.up))),
+                         week: mondaysBetween(date(p.start), d) + 1,
+                         weeks: calendarWeeks(p),
                          isRecovery: WeekBuilder.isRecoveryWeek(weekIndex(monday(of: d))))
+    }
+
+    /// Weeks are counted Monday to Sunday, like the week view and recovery weeks, not from the
+    /// phase's first day: a phase starting on a Friday otherwise called Mon–Thu "week 1" and
+    /// Fri–Sun "week 2" of the same calendar week.
+    func calendarWeeks(_ p: PlanPhase) -> Int { mondaysBetween(date(p.start), date(p.end)) + 1 }
+
+    private func mondaysBetween(_ a: Date, _ b: Date) -> Int {
+        let days = calendar.dateComponents([.day], from: monday(of: a), to: monday(of: b)).day ?? 0
+        return max(0, Int((Double(days) / 7).rounded()))
     }
 
     static func mk(_ k: SessionKind, _ t: String, _ d: String = "") -> PlanSession {

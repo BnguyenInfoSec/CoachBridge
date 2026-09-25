@@ -467,8 +467,7 @@ struct PhaseRibbon: View {
     private var segments: [Segment] {
         engine.phases.map { p in
             let days = (engine.calendar.dateComponents([.day], from: engine.date(p.start), to: engine.date(p.end)).day ?? 0) + 1
-            return Segment(id: p.id, short: p.short, name: p.name, days: days,
-                           weeks: max(1, Int((Double(days) / 7).rounded(.up))))
+            return Segment(id: p.id, short: p.short, name: p.name, days: days, weeks: engine.calendarWeeks(p))
         }
     }
 }
@@ -614,7 +613,7 @@ private struct MonthGrid: View {
         return HStack(spacing: 12) {
             ForEach(seen, id: \.phase.id) { pw in
                 HStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 1.5).fill(Palette.color(forPhase: pw.phase.id)).frame(width: 14, height: 4)
+                    RoundedRectangle(cornerRadius: 1.5).fill(Palette.color(forPhase: pw.phase.id)).frame(width: 14, height: 5)
                     Text(pw.phase.name).font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -680,8 +679,8 @@ private struct MonthCell: View {
         .overlay(alignment: .top) {
             if let phase {
                 UnevenRoundedRectangle(topLeadingRadius: 8, topTrailingRadius: 8, style: .continuous)
-                    .fill(Palette.color(forPhase: phase.phase.id).opacity(phase.isRecovery ? 0.45 : 1))
-                    .frame(height: 4)
+                    .fill(Palette.color(forPhase: phase.phase.id).opacity(phase.isRecovery ? 0.55 : 1))
+                    .frame(height: 5)
             }
         }
         .overlay(RoundedRectangle(cornerRadius: 8)
