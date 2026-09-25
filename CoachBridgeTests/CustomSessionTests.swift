@@ -49,6 +49,6 @@ final class CustomSessionTests: XCTestCase {
         let json = String(decoding: try JSONEncoder().encode(input), as: UTF8.self)
         XCTAssertTrue(json.contains("\"addedByAthlete\":true"))
         XCTAssertTrue(json.contains("\"addedByAthlete\":false"))
-        XCTAssertTrue(PlanAdjuster.systemPrompt().contains("addedByAthlete"))
+        XCTAssertTrue(PlanAdjuster.systemPrompt(engine: PlanEngine()).contains("addedByAthlete"))
     }
 }

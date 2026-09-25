@@ -243,7 +243,7 @@ final class PlanAdjusterTests: XCTestCase {
                                            profile: "Me", healthSummary: nil, recentWork: [])
         XCTAssertTrue(msg.contains("\"title\":\"Easy run\""))
         XCTAssertTrue(msg.contains("Not shared"))
-        XCTAssertTrue(PlanAdjuster.systemPrompt().contains("minimum week is three"))
+        XCTAssertTrue(PlanAdjuster.systemPrompt(engine: e).contains("minimum week is three"))
     }
 }
 
