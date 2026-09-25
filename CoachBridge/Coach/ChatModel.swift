@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import HealthKit
 import os
 
 /// Loads and caches the dashboard data (shared by the dashboard, chat context and handoff).
@@ -10,7 +9,7 @@ final class DashboardModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorText: String?
 
-    private let store: HKHealthStore
+    private let source: any HealthSource
 
     /// Which mode the numbers on screen came from. Data loaded in the other mode is never shown:
     /// switching demo mode on must not leave real Health readings sitting in the UI.
@@ -19,7 +18,7 @@ final class DashboardModel: ObservableObject {
     /// is discarded instead of overwriting the demo numbers.
     private var generation = 0
 
-    init(store: HKHealthStore) { self.store = store }
+    init(source: any HealthSource) { self.source = source }
 
     /// `force` runs even when a load is already in flight — used when demo mode flips, where
     /// waiting for the old load would mean showing the wrong data in the meantime.
@@ -37,7 +36,7 @@ final class DashboardModel: ObservableObject {
             return
         }
         do {
-            let loaded = try await TrendReader(store: store).load()
+            let loaded = try await source.dashboard(now: .now)
             guard token == generation else { return }     // demo mode flipped while we were reading
             data = loaded
             loadedInDemoMode = false

@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import HealthKit
 import os
 
 /// One calendar day: the plan (with Claude's changes applied), what was planned originally,
@@ -40,7 +39,7 @@ final class PlanModel: ObservableObject {
     let rules = RuleStore()
     /// One-off day changes made from the Coach chat, kept until the day passes.
     @Published private(set) var chatDays: [String: PlanUpdate.DayChange] = [:]
-    private let store: HKHealthStore
+    private let source: any HealthSource
     private let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "CoachBridge", category: "plan")
     private var loadedRanges: Set<String> = []
     private var bag: Set<AnyCancellable> = []
@@ -52,8 +51,8 @@ final class PlanModel: ObservableObject {
     var needsSetup: Bool { !profile.isComplete }
     var prescriber: Prescriber { Prescriber(engine: engine) }
 
-    init(store: HKHealthStore) {
-        self.store = store
+    init(source: any HealthSource) {
+        self.source = source
         // A local, because Swift won't let us read `self.settings` until every stored
         // property has a value.
         let loaded = PlanSettings.load()
@@ -114,7 +113,7 @@ final class PlanModel: ObservableObject {
         do {
             let list = DemoData.isOn
                 ? DemoData.workouts(from: start, to: end, calendar: engine.calendar)
-                : try await TrendReader(store: store).summaries(from: start, to: end)
+                : try await source.workouts(from: start, to: end)
             var byDay = workoutsByDay
             // Replace the whole range so deleted workouts disappear.
             var d = engine.calendar.startOfDay(for: start)
@@ -221,7 +220,7 @@ final class PlanModel: ObservableObject {
             await dashboard.ensureLoaded()
             summary = dashboard.data.map { CoachContext.healthSummary($0) }
             let weekAgo = e.add(today, days: -7)
-            if let list = try? await TrendReader(store: store).summaries(from: weekAgo, to: e.add(today, days: 1)) {
+            if let list = try? await source.workouts(from: weekAgo, to: e.add(today, days: 1)) {
                 recent = list.reversed().map(CoachContext.workoutLine)
             }
         }

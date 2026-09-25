@@ -1,4 +1,3 @@
-import HealthKit
 import UIKit
 import os
 
@@ -28,7 +27,7 @@ final class Exporter: ObservableObject {
     @Published private(set) var lastAutoSuccess: Date?
     @Published private(set) var lastAutoSummary: String?
 
-    private let store: HKHealthStore
+    private let source: any HealthSource
     private let auth: GoogleAuth
     private let drive: DriveClient
     private let defaults = UserDefaults.standard
@@ -43,8 +42,8 @@ final class Exporter: ObservableObject {
         static let lastAutoSummary = "export.lastAutoSummary"
     }
 
-    init(store: HKHealthStore, auth: GoogleAuth) {
-        self.store = store
+    init(source: any HealthSource, auth: GoogleAuth) {
+        self.source = source
         self.auth = auth
         drive = DriveClient(token: { [weak auth] in
             guard let auth else { throw GoogleAuth.AuthError.notSignedIn }
@@ -111,12 +110,11 @@ final class Exporter: ObservableObject {
             let folderID = try await drive.ensureFolderPath(Self.folderPath)
             let existing = try await drive.listFiles(inFolder: folderID)
             let days = ExportPlan.days(today: .now, existingFileNames: Set(existing.keys), backfillLimit: backfillLimit)
-            let builder = DayRecordBuilder(store: store)
 
             var created = 0, updated = 0, empty = 0
             for day in days {
                 try Task.checkCancellation()
-                let record = await builder.build(for: day).record
+                let record = await source.day(day).record
                 // A file with no metrics tells the coach nothing; skip it (it'll be retried next run).
                 guard !record.metrics.isEmpty else { empty += 1; continue }
                 let outcome = try await drive.upsertJSON(named: record.fileName, data: record.jsonData(),

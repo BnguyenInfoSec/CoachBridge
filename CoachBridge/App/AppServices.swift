@@ -7,6 +7,8 @@ final class AppServices {
     static let shared = AppServices()
 
     let health: HealthAuthorizer
+    /// The one place data is read from. Models take this, never an `HKHealthStore`.
+    let source: any HealthSource
     let google: GoogleAuth
     let exporter: Exporter
     let dashboard: DashboardModel
@@ -21,10 +23,11 @@ final class AppServices {
     private init() {
         health = HealthAuthorizer()
         google = GoogleAuth()
-        exporter = Exporter(store: health.store, auth: google)
-        dashboard = DashboardModel(store: health.store)
+        source = HealthKitSource(store: health.store)
+        exporter = Exporter(source: source, auth: google)
+        dashboard = DashboardModel(source: source)
         chat = ChatModel()
-        plan = PlanModel(store: health.store)
+        plan = PlanModel(source: source)
         calendar = CalendarSync()
         weather = WeatherModel()
         watch = WatchScheduler()

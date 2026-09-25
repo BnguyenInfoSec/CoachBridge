@@ -157,7 +157,6 @@ struct TodayView: View {
         if health.authorization == .notRun {
             await health.requestAuthorization()   // shows the Health sheet only the first time
         }
-        let builder = DayRecordBuilder(store: health.store)
-        build = await builder.build(for: day)
+        build = await AppServices.shared.source.day(day)
     }
 }

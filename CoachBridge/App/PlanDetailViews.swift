@@ -121,7 +121,6 @@ struct SessionDetailView: View {
 
 struct WorkoutDetailView: View {
     @EnvironmentObject private var plan: PlanModel
-    @EnvironmentObject private var health: HealthAuthorizer
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var dashboard: DashboardModel
     let summary: WorkoutSummary
@@ -244,7 +243,7 @@ struct WorkoutDetailView: View {
         }
         .task {
             do {
-                detail = try await WorkoutDetailReader(store: health.store).load(summary, lthr: plan.settings.lthrBpm)
+                detail = try await AppServices.shared.source.workoutDetail(summary, lthr: plan.settings.lthrBpm)
                 if detail == nil { errorText = "This workout is no longer in Apple Health." }
             } catch {
                 errorText = error.localizedDescription
