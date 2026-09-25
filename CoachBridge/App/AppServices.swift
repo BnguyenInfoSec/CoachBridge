@@ -9,6 +9,7 @@ final class AppServices {
     let health: HealthAuthorizer
     /// The one place data is read from. Models take this, never an `HKHealthStore`.
     let source: any HealthSource
+    let fit: FITWorkoutStore
     let google: GoogleAuth
     let exporter: Exporter
     let dashboard: DashboardModel
@@ -24,7 +25,8 @@ final class AppServices {
     private init() {
         health = HealthAuthorizer()
         google = GoogleAuth()
-        source = HealthKitSource(store: health.store)
+        fit = FITWorkoutStore()
+        source = CombinedSource(health: HealthKitSource(store: health.store), fit: fit)
         exporter = Exporter(source: source, auth: google)
         dashboard = DashboardModel(source: source)
         chat = ChatModel()
@@ -49,6 +51,44 @@ final class AppServices {
         await plan.loadWorkouts(from: Calendar.current.date(byAdding: .day, value: -45, to: today)!,
                                 to: Calendar.current.date(byAdding: .day, value: 45, to: today)!)
         watchLink.push()        // the watch must switch to (or away from) demo data too
+    }
+
+    /// Imports FIT files picked in the app or opened from Files / the share sheet. Returns a
+    /// line for the user. Each file is size-checked before it's read, and parsed defensively.
+    func importFIT(_ urls: [URL]) async -> String {
+        var added = 0, duplicates = 0
+        var failures: [String] = []
+        for url in urls {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer {
+                if scoped { url.stopAccessingSecurityScopedResource() }
+                // "Open in" copies the file into our Inbox; the totals are all we keep.
+                if url.pathComponents.contains("Inbox") { try? FileManager.default.removeItem(at: url) }
+            }
+            do {
+                let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                guard size <= FITParser.maxFileBytes else { throw FITParser.Failure.tooLarge }
+                switch try fit.importFile(try Data(contentsOf: url)) {
+                case .added(let n): added += n
+                case .alreadyImported: duplicates += 1
+                }
+            } catch {
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        if added > 0 {
+            plan.invalidateWorkouts()
+            await dashboard.refresh(force: true)
+            let today = Calendar.current.startOfDay(for: .now)
+            await plan.loadWorkouts(from: Calendar.current.date(byAdding: .day, value: -45, to: today)!,
+                                    to: Calendar.current.date(byAdding: .day, value: 45, to: today)!)
+            watchLink.push()
+        }
+        var parts: [String] = []
+        if added > 0 { parts.append("Imported \(added) session\(added == 1 ? "" : "s").") }
+        if duplicates > 0 { parts.append("\(duplicates) file\(duplicates == 1 ? " was" : "s were") already imported.") }
+        parts += failures
+        return parts.isEmpty ? "Nothing to import." : parts.joined(separator: "\n")
     }
 
     /// Places sessions (calendar), then mirrors them to the Watch. One place to call after anything changes.

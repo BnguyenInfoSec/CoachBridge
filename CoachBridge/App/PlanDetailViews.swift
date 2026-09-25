@@ -345,7 +345,11 @@ struct WorkoutDetailView: View {
         .task {
             do {
                 detail = try await AppServices.shared.source.workoutDetail(summary, lthr: plan.settings.lthrBpm)
-                if detail == nil { errorText = "This workout is no longer in Apple Health." }
+                if detail == nil {
+                    errorText = summary.origin.kind == .fitFile
+                        ? "Imported from a FIT file\(summary.origin.name.map { " (\($0))" } ?? ""). Only the totals are kept, so there's no heart-rate chart."
+                        : "This workout is no longer in Apple Health."
+                }
             } catch {
                 errorText = error.localizedDescription
             }

@@ -33,6 +33,7 @@ struct CoachBridgeApp: App {
     @StateObject private var watch = AppServices.shared.watch
     @StateObject private var venues = AppServices.shared.venues
     @StateObject private var review = AppServices.shared.review
+    @State private var fitMessage: String?
 
     var body: some Scene {
         WindowGroup {
@@ -48,7 +49,19 @@ struct CoachBridgeApp: App {
                 .environmentObject(watch)
                 .environmentObject(venues)
                 .environmentObject(review)
-                .onOpenURL { url in _ = GIDSignIn.sharedInstance.handle(url) }
+                .onOpenURL { url in
+                    // A FIT file opened from Files or shared from a bike computer's app.
+                    if url.isFileURL, url.pathExtension.lowercased() == "fit" {
+                        Task { fitMessage = await AppServices.shared.importFIT([url]) }
+                    } else {
+                        _ = GIDSignIn.sharedInstance.handle(url)
+                    }
+                }
+                .alert("FIT import", isPresented: Binding(get: { fitMessage != nil }, set: { if !$0 { fitMessage = nil } })) {
+                    Button("OK") { fitMessage = nil }
+                } message: {
+                    Text(fitMessage ?? "")
+                }
                 .task { await google.restore() }
         }
         .onChange(of: scenePhase) { _, phase in

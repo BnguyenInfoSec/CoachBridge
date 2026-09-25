@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var chat: ChatModel
@@ -23,6 +24,10 @@ struct SettingsView: View {
     @AppStorage(DemoData.key) private var demoMode = false
     /// What demo mode was when this screen opened, so leaving it can tell whether to reload.
     @State private var modeOnAppear: Bool?
+    @ObservedObject private var fit = AppServices.shared.fit
+    @State private var showFITImporter = false
+    @State private var fitMessage: String?
+    @State private var confirmRemoveFIT = false
 
     private var provider: LLMProvider { LLMProvider(rawValue: providerRaw) ?? .anthropic }
 
@@ -116,6 +121,26 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button {
+                        showFITImporter = true
+                    } label: {
+                        Label("Import FIT files", systemImage: "square.and.arrow.down")
+                    }
+                    if !fit.workouts.isEmpty {
+                        LabeledContent("Imported workouts", value: "\(fit.workouts.count)")
+                        let devices = Set(fit.workouts.compactMap(\.device)).sorted()
+                        if !devices.isEmpty {
+                            LabeledContent("From", value: devices.joined(separator: ", "))
+                        }
+                        Button("Remove imported workouts", role: .destructive) { confirmRemoveFIT = true }
+                    }
+                } header: {
+                    Text("Other devices")
+                } footer: {
+                    Text("Bring in rides and runs from a Garmin, Wahoo, Hammerhead or other bike computer: import .fit files here, or open one in Coach Bridge from Files or the share sheet. Only each session's totals are kept — never the route — and a session that's also in Apple Health counts once.")
+                }
+
+                Section {
                     Toggle("Demo mode", isOn: $demoMode)
                 } header: {
                     Text("Demo")
@@ -131,6 +156,27 @@ struct SettingsView: View {
             .screenBackground(Palette.Tab.settings)
             .navigationTitle("Settings")
             .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
+            .fileImporter(isPresented: $showFITImporter, allowedContentTypes: [UTType(filenameExtension: "fit") ?? .data],
+                          allowsMultipleSelection: true) { result in
+                guard case .success(let urls) = result, !urls.isEmpty else { return }
+                Task { fitMessage = await AppServices.shared.importFIT(urls) }
+            }
+            .alert("FIT import", isPresented: Binding(get: { fitMessage != nil }, set: { if !$0 { fitMessage = nil } })) {
+                Button("OK") { fitMessage = nil }
+            } message: {
+                Text(fitMessage ?? "")
+            }
+            .confirmationDialog("Remove all imported workouts?", isPresented: $confirmRemoveFIT, titleVisibility: .visible) {
+                Button("Remove \(fit.workouts.count) workouts", role: .destructive) {
+                    fit.deleteAll()
+                    Task {
+                        AppServices.shared.plan.invalidateWorkouts()
+                        await AppServices.shared.dashboard.refresh(force: true)
+                    }
+                }
+            } message: {
+                Text("Removes them from Coach Bridge only. Your FIT files and your device's own records aren't touched.")
+            }
             .onChange(of: demoMode) { _, new in
                 modeOnAppear = modeOnAppear ?? !new
                 Task { await AppServices.shared.demoModeChanged() }
