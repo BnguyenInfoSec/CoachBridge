@@ -20,6 +20,10 @@ enum GlanceStore {
         }
     }
 
+    static func clear() {
+        if let url { try? FileManager.default.removeItem(at: url) }
+    }
+
     static func read() -> WatchGlance? {
         guard let url, let data = try? Data(contentsOf: url) else { return nil }
         let dec = JSONDecoder()

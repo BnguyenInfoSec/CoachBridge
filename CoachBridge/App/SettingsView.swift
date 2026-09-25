@@ -28,6 +28,10 @@ struct SettingsView: View {
     @State private var showFITImporter = false
     @State private var fitMessage: String?
     @State private var confirmRemoveFIT = false
+    @State private var exportFile: ExportFile?
+    @State private var exportError: String?
+    @State private var confirmDelete = false
+    @State private var deleted = false
 
     private var provider: LLMProvider { LLMProvider(rawValue: providerRaw) ?? .anthropic }
 
@@ -141,6 +145,22 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button {
+                        do { exportFile = ExportFile(url: try PersonalData.export()) } catch { exportError = error.localizedDescription }
+                    } label: {
+                        Label("Export my data", systemImage: "square.and.arrow.up")
+                    }
+                    Button(role: .destructive) { confirmDelete = true } label: {
+                        Label("Delete my data", systemImage: "trash")
+                    }
+                    if let exportError { Text(exportError).font(.footnote).foregroundStyle(.red) }
+                } header: {
+                    Text("Your data")
+                } footer: {
+                    Text("Export gives you everything Coach Bridge stored — your plan, sessions, chats, workout notes and settings — as one JSON file. Health data stays in Apple Health, which has its own export; API keys are never included. Delete removes all of it from this iPhone and your Watch, signs out of Google and removes the saved keys.")
+                }
+
+                Section {
                     Toggle("Demo mode", isOn: $demoMode)
                 } header: {
                     Text("Demo")
@@ -156,6 +176,30 @@ struct SettingsView: View {
             .screenBackground(Palette.Tab.settings)
             .navigationTitle("Settings")
             .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
+            .sheet(item: $exportFile, onDismiss: {
+                // The export holds everything; don't leave a copy lying in tmp.
+                if let url = exportFile?.url { try? FileManager.default.removeItem(at: url) }
+            }) { file in
+                ShareSheet(items: [file.url])
+            }
+            .confirmationDialog("Delete all your Coach Bridge data?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Delete my data", role: .destructive) {
+                    Task { await PersonalData.deleteEverything(removeTrainingCalendar: false); deleted = true }
+                }
+                Button("Delete my data and the Training calendar", role: .destructive) {
+                    Task { await PersonalData.deleteEverything(removeTrainingCalendar: true); deleted = true }
+                }
+            } message: {
+                Text("Removes your plan, sessions, chats, workout notes, imported workouts, places and settings from this iPhone and your Watch, removes scheduled Watch workouts, signs out of Google and deletes your API keys. Apple Health and the files already in your Google Drive aren't touched. This can't be undone; export first if you want a copy.")
+            }
+            .fullScreenCover(isPresented: $deleted) {
+                ContentUnavailableView {
+                    Label("Your data has been deleted", systemImage: "checkmark.shield")
+                } description: {
+                    Text("Close Coach Bridge from the app switcher. It will start fresh, as if newly installed.")
+                }
+                .interactiveDismissDisabled()
+            }
             .fileImporter(isPresented: $showFITImporter, allowedContentTypes: [UTType(filenameExtension: "fit") ?? .data],
                           allowsMultipleSelection: true) { result in
                 guard case .success(let urls) = result, !urls.isEmpty else { return }
@@ -218,4 +262,19 @@ struct SettingsView: View {
             keyError = error.localizedDescription
         }
     }
+}
+
+/// An export waiting to be shared.
+struct ExportFile: Identifiable {
+    let url: URL
+    var id: String { url.path }
+}
+
+/// The system share sheet, for a file.
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

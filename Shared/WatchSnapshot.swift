@@ -9,6 +9,8 @@ enum WatchLinkKey {
     static let snapshot = "snapshot"
     /// transferUserInfo: a feel report, queued until the phone takes it.
     static let feel = "feel"
+    /// applicationContext: the phone's data was deleted; the watch deletes its copy too.
+    static let wipe = "wipe"
 }
 
 /// Everything the watch shows, as of `generatedAt`.

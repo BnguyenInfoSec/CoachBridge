@@ -43,6 +43,12 @@ final class WatchLink: NSObject, ObservableObject {
         }
     }
 
+    /// After "Delete my data": the watch removes its cached snapshot and complication data.
+    func wipeWatch() {
+        guard let session, session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
+        try? session.updateApplicationContext([WatchLinkKey.wipe: true])
+    }
+
     // MARK: Building the snapshot
 
     /// Days of sessions sent to the watch, starting today.

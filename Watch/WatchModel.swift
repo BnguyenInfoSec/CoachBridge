@@ -40,6 +40,21 @@ final class WatchModel: NSObject, ObservableObject {
         Self.saveAnswered(answered)
     }
 
+    /// The phone's data was deleted: remove everything the watch kept.
+    private func wipe() {
+        snapshot = nil
+        answered = []
+        try? FileManager.default.removeItem(at: Self.snapshotURL)
+        try? FileManager.default.removeItem(at: Self.answeredURL)
+        GlanceStore.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func handle(_ context: [String: Any]) {
+        if context[WatchLinkKey.wipe] as? Bool == true { wipe(); return }
+        if let data = context[WatchLinkKey.snapshot] as? Data { receive(data) }
+    }
+
     private func receive(_ data: Data) {
         guard let s = WatchSnapshot.decode(data) else {
             log.info("Ignored a snapshot that didn't decode")
@@ -92,12 +107,15 @@ final class WatchModel: NSObject, ObservableObject {
 extension WatchModel: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?) {
         // A context that arrived while the app wasn't running is waiting here.
-        guard let data = session.receivedApplicationContext[WatchLinkKey.snapshot] as? Data else { return }
-        Task { @MainActor in self.receive(data) }
+        let context = session.receivedApplicationContext
+        let wipe = context[WatchLinkKey.wipe] as? Bool == true
+        let data = context[WatchLinkKey.snapshot] as? Data
+        Task { @MainActor in self.handle(wipe ? [WatchLinkKey.wipe: true] : data.map { [WatchLinkKey.snapshot: $0] } ?? [:]) }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext context: [String: Any]) {
-        guard let data = context[WatchLinkKey.snapshot] as? Data else { return }
-        Task { @MainActor in self.receive(data) }
+        let wipe = context[WatchLinkKey.wipe] as? Bool == true
+        let data = context[WatchLinkKey.snapshot] as? Data
+        Task { @MainActor in self.handle(wipe ? [WatchLinkKey.wipe: true] : data.map { [WatchLinkKey.snapshot: $0] } ?? [:]) }
     }
 }
