@@ -248,6 +248,13 @@ final class PlanAdjusterTests: XCTestCase {
 }
 
 final class WorkoutMathTests: XCTestCase {
+    // Same calendar as PlanEngineTests; `cal` there is private to that class.
+    private var cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        return c
+    }()
+
     // MARK: Training blocks
 
     func testSuggestedBlocksFillTheRunway() {
