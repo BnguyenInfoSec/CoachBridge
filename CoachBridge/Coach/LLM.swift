@@ -101,6 +101,72 @@ enum LLMFactory {
 
     /// Whether the chosen provider has what it needs to run.
     static var isConfigured: Bool { current(maxTokens: 1) != nil }
+
+    /// Why nothing can run, naming the provider and what's missing *on this iPhone*. A missing
+    /// key used to read the same as a fresh install, and always said "Anthropic" — even with
+    /// OpenAI chosen, or after a reinstall wiped the Keychain.
+    static func missingSetupMessage(for feature: String) -> String {
+        let defaults = UserDefaults.standard
+        let provider = LLMProvider(rawValue: defaults.string(forKey: LLMProvider.key) ?? "") ?? .anthropic
+        if provider == .hosted, (defaults.string(forKey: AppSettings.hostedURLKey) ?? "").isEmpty {
+            return "Add the shared server's address in Settings → Model provider to \(feature)."
+        }
+        let what = provider == .hosted ? "access token for the shared server" : "\(provider.label) API key"
+        return "No \(what) is saved on this iPhone. Add it in Settings → Model provider to \(feature). "
+            + "Keys stay on the phone they were added on, and deleting the app removes them."
+    }
+}
+
+/// Checks a key before it's saved, with the provider's free model-list endpoint: nothing is
+/// generated, so it costs nothing. The key goes only to that provider, over an ephemeral
+/// session that keeps no cache or cookies.
+enum KeyTester {
+    enum Result: Equatable {
+        case valid, rejected, unreachable(String)
+
+        var message: String {
+            switch self {
+            case .valid: return "The key works."
+            case .rejected: return "The provider rejected this key. Check it was copied in full and hasn't been revoked."
+            case .unreachable(let why): return "Couldn't check the key: \(why)"
+            }
+        }
+    }
+
+    static func request(provider: LLMProvider, key: String) -> URLRequest? {
+        switch provider {
+        case .anthropic:
+            var r = URLRequest(url: URL(string: "https://api.anthropic.com/v1/models?limit=1")!)
+            r.setValue(key, forHTTPHeaderField: "x-api-key")
+            r.setValue(AnthropicClient.apiVersion, forHTTPHeaderField: "anthropic-version")
+            return r
+        case .openai:
+            var r = URLRequest(url: URL(string: "https://api.openai.com/v1/models")!)
+            r.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            return r
+        case .hosted:
+            return nil                                        // the server's own business
+        }
+    }
+
+    static func test(provider: LLMProvider, key: String) async -> Result {
+        guard var req = request(provider: provider, key: key.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            return .unreachable("a shared server's token can only be checked by sending a message.")
+        }
+        req.timeoutInterval = 15
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.finishTasksAndInvalidate() }
+        do {
+            let (_, response) = try await session.data(for: req)
+            switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
+            case 200: return .valid
+            case 401, 403: return .rejected
+            case let code: return .unreachable("the provider answered \(code).")
+            }
+        } catch {
+            return .unreachable(error.localizedDescription)
+        }
+    }
 }
 
 // MARK: - OpenAI

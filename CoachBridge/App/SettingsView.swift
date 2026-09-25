@@ -20,6 +20,8 @@ struct SettingsView: View {
     @State private var keyDraft = ""
     @State private var hasKey = false
     @State private var keyError: String?
+    @State private var keyTest: KeyTester.Result?
+    @State private var testingKey = false
     @State private var showOnboarding = false
     @AppStorage(DemoData.key) private var demoMode = false
     /// What demo mode was when this screen opened, so leaving it can tell whether to reload.
@@ -49,6 +51,9 @@ struct SettingsView: View {
                     if hasKey {
                         LabeledContent(provider == .hosted ? "Access token" : "API key",
                                        value: "Saved on this iPhone")
+                        if provider != .hosted {
+                            testButton { Keychain.get(account: provider.keychainAccount) ?? "" }
+                        }
                         Button("Remove", role: .destructive) {
                             Keychain.delete(account: provider.keychainAccount)
                             hasKey = false
@@ -59,6 +64,9 @@ struct SettingsView: View {
                             .autocorrectionDisabled()
                         Button("Save") { saveKey() }
                             .disabled(keyDraft.trimmingCharacters(in: .whitespaces).count < 8)
+                        if provider != .hosted, keyDraft.trimmingCharacters(in: .whitespaces).count >= 8 {
+                            testButton { keyDraft }
+                        }
                         if let keyError { Text(keyError).foregroundStyle(.red).font(.footnote) }
                     }
                     Picker("Model", selection: $model) {
@@ -238,10 +246,35 @@ struct SettingsView: View {
                 Task { await AppServices.shared.demoModeChanged() }
             }
             .onChange(of: providerRaw) { _, _ in
+                keyTest = nil
                 keyDraft = ""
                 keyError = nil
                 refreshKeyState()
             }
+        }
+    }
+
+    /// Checks a key for free (the provider's model list) and says plainly whether it works.
+    @ViewBuilder
+    private func testButton(_ key: @escaping () -> String) -> some View {
+        Button {
+            testingKey = true
+            Task {
+                keyTest = await KeyTester.test(provider: provider, key: key())
+                testingKey = false
+            }
+        } label: {
+            HStack {
+                Text("Test key")
+                Spacer()
+                if testingKey { ProgressView() }
+            }
+        }
+        .disabled(testingKey)
+        if let keyTest {
+            Label(keyTest.message, systemImage: keyTest == .valid ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.footnote)
+                .foregroundStyle(keyTest == .valid ? Palette.good : Palette.warning)
         }
     }
 

@@ -68,7 +68,7 @@ final class ReviewModel: ObservableObject {
         }
 
         guard let (client, _, model) = LLMFactory.current(maxTokens: WorkoutReviewer.maxTokens) else {
-            errorText = "Add an API key in Settings and the coach can write about your sessions."
+            errorText = LLMFactory.missingSetupMessage(for: "get a coach's note")
             return
         }
 

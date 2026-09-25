@@ -116,7 +116,7 @@ final class ChatModel: ObservableObject {
         guard !text.isEmpty, !isStreaming else { return }
         let canEdit = UserDefaults.standard.object(forKey: AppSettings.chatCanEditPlanKey) as? Bool ?? true
         guard let setup = LLMFactory.current(maxTokens: canEdit ? 3000 : 1500) else {
-            errorText = AnthropicClient.APIError.missingKey.localizedDescription
+            errorText = LLMFactory.missingSetupMessage(for: "chat with the coach")
             return
         }
         errorText = nil

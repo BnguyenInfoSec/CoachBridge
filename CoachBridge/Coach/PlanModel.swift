@@ -222,7 +222,7 @@ final class PlanModel: ObservableObject {
         }
         guard !isUpdating else { return }
         guard let setup = LLMFactory.current(maxTokens: 4000) else {
-            errorText = "Add your API key in Settings to get plan updates."
+            errorText = LLMFactory.missingSetupMessage(for: "get plan updates")
             return
         }
 
