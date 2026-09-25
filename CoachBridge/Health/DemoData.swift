@@ -91,7 +91,7 @@ enum DemoData {
             return WorkoutSummary(id: UUID(uuidString: String(format: "DEC0DE00-0000-4000-8000-%012d", offset))
                                     ?? UUID(),
                                   sport: sport, name: name, start: start,
-                                  duration: duration, distanceMeters: distance, avgHR: hr)
+                                  duration: duration, distanceMeters: distance, avgHR: hr, origin: .demo)
         }
     }
 
@@ -114,7 +114,8 @@ enum DemoData {
                     start: calendar.date(byAdding: .hour, value: 7, to: day)!,
                     duration: minutes * 60,
                     distanceMeters: sport == .swim ? minutes * 45 : (sport == .bike ? minutes * 440 : minutes * 195),
-                    avgHR: 120 + noise(n, 5) * 40))
+                    avgHR: 120 + noise(n, 5) * 40,
+                    origin: .demo))
                 i += 1
             }
             day = calendar.date(byAdding: .day, value: 1, to: day)!

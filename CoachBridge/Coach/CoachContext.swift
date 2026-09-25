@@ -169,7 +169,10 @@ enum CoachContext {
             lines.append("Resting HR by day, oldest to newest (bpm): " + d.rhr.suffix(14).map { "\(Int($0.value.rounded()))" }.joined(separator: ", "))
         }
         if !d.hrv.isEmpty {
-            lines.append("HRV daily mean, mostly daytime readings, oldest to newest (ms): " + d.hrv.suffix(14).map { "\(Int($0.value.rounded()))" }.joined(separator: ", "))
+            lines.append("HRV (\(d.hrvMethod.label)) daily mean, mostly daytime readings, oldest to newest (ms): " + d.hrv.suffix(14).map { "\(Int($0.value.rounded()))" }.joined(separator: ", "))
+            if d.hrvMethod == .sdnn {
+                lines.append("Note: this is SDNN, Apple Health's measure. It isn't comparable with RMSSD figures from Whoop, Garmin or Oura; judge it only against this athlete's own trend.")
+            }
         }
 
         let weeks = Dictionary(grouping: d.weekly, by: \.weekStart).sorted { $0.key < $1.key }

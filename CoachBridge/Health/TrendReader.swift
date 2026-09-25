@@ -12,6 +12,9 @@ struct DashboardData: Sendable {
     /// Sessions too long to be real (a workout left running), excluded from the weekly hours.
     let ignoredLongSessions: Int
     let generatedAt: Date
+    /// Apple Health's HRV is SDNN. Carried with the numbers so nothing downstream — the coach
+    /// above all — reads them against RMSSD norms from Whoop, Garmin or Oura.
+    var hrvMethod: HRVMethod = .sdnn
 }
 
 /// Reads the trend data behind the phone dashboard. Everything stays in memory.
@@ -105,7 +108,8 @@ final class TrendReader {
         let distance = distanceType.flatMap { w.statistics(for: $0)?.sumQuantity()?.doubleValue(for: .meter()) }
         let hr = w.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: bpm)
         return WorkoutSummary(id: w.uuid, sport: sport, name: Self.name(for: w.workoutActivityType),
-                              start: w.startDate, duration: w.duration, distanceMeters: distance, avgHR: hr)
+                              start: w.startDate, duration: w.duration, distanceMeters: distance, avgHR: hr,
+                              origin: Origin(kind: .appleHealth, name: w.sourceRevision.source.name))
     }
 
     static func sport(for type: HKWorkoutActivityType) -> Sport {

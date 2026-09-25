@@ -39,6 +39,8 @@ struct WorkoutSummary: Identifiable, Hashable, Sendable {
     let duration: TimeInterval
     let distanceMeters: Double?
     let avgHR: Double?
+    /// Which source recorded it. Defaults to Apple Health, the only source before v2.9.
+    var origin: Origin = .appleHealth
 }
 
 /// A rough, transparent recovery read from resting HR and HRV versus the athlete's own baseline.
