@@ -32,7 +32,7 @@ regenerate. It's git-ignored.
 
 Everything through v2.7.0 was written without a Swift toolchain. v2.7.1 (2026-09-25) is the first
 version compiled and tested by an agent: the app built clean, the tests needed fixing, and two of the
-failing tests were real plan-engine bugs (README, v2.7.1). Build and all 164 tests were green then.
+failing tests were real plan-engine bugs (CHANGELOG, v2.7.1). Build and all 164 tests were green then.
 Commit `90d2b22` is v2.7.0 exactly as delivered, for comparison.
 
 Keep it green. Don't claim a task is done until `build` and `test` both pass, and commit one fix
@@ -155,8 +155,12 @@ is told to plan around them and `RuleEngine` never touches them.
 
 ## 8. Keeping the record
 
-`README.md` is a running changelog for Brandon, newest section last — a section per version saying
-what changed and why, in the same voice. Keep appending.
+`CHANGELOG.md` is the running changelog for Brandon, newest section last — a section per version
+saying what changed and why, in the same voice. Keep appending there.
+
+`README.md` is the project's public face: what it is, architecture, privacy, setup, testing,
+status. Keep it current (version, test count, verified/unverified list) but never append history
+to it.
 
 Longer history lives in the "Fitness Coach" project on claude.ai and is not readable from here:
 `coach-bridge-progress.md` (milestone history and the reasoning behind each decision),

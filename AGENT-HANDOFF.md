@@ -303,8 +303,10 @@ architectural decisions:
 | `claude/coach-bridge-feedback-loop.md` | The v2.7 feel prompt and coach's note subsystem |
 | `claude/coach-bridge-beta-plan.md` | What a small beta would require |
 
-`README.md` in the repo is a running changelog written for Brandon, newest section last. Keep
+`CHANGELOG.md` in the repo is the running changelog written for Brandon, newest section last. Keep
 appending to it — a section per version, explaining what changed and why, in the same voice.
+`README.md` is the project overview and setup guide; keep it accurate, but history goes in the
+changelog.
 
 When you finish a meaningful piece of work, update `claude/coach-bridge-progress.md`. That file is
 how the next agent learns what you did.
