@@ -1,0 +1,417 @@
+import Charts
+import SwiftUI
+
+/// Native dashboard: recovery signal, today's key numbers, 4-week trends, weekly training load.
+struct DashboardView: View {
+    @EnvironmentObject private var dashboard: DashboardModel
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    if let d = dashboard.data {
+                        RecoveryCard(signal: d.recovery)
+                        StatGrid(record: d.today, rhrBaseline: Stats.mean(d.rhr.dropLast().map(\.value)))
+                        TrendCard(title: "Resting heart rate", unit: "bpm", points: d.rhr,
+                                  rolling: nil, showAverage: true,
+                                  caption: "Daily resting HR, last 4 weeks. Dashed line: 4-week average.")
+                        TrendCard(title: "Heart rate variability", unit: "ms", points: d.hrv,
+                                  rolling: d.hrvRolling, showAverage: false,
+                                  caption: "Dots: daily mean (mostly daytime readings). Line: 7-day average.")
+                        WeeklyLoadCard(loads: d.weekly, ignored: d.ignoredLongSessions)
+                        RecentWorkoutsCard(workouts: d.recent)
+                        Text("Updated \(d.generatedAt.formatted(date: .omitted, time: .shortened))")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if dashboard.isLoading {
+                        ProgressView("Reading Health…").padding(.top, 80)
+                    } else if let err = dashboard.errorText {
+                        ContentUnavailableView("Couldn't read Health data", systemImage: "heart.slash",
+                                               description: Text(err))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
+            }
+            .screenBackground(Palette.Tab.today)
+            .softScrollEdges()
+            .navigationTitle("Today")
+            .refreshable { await dashboard.refresh() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await dashboard.ensureLoaded() } }
+            }
+        }
+    }
+}
+
+// MARK: - Cards
+
+private struct Card<Content: View>: View {
+    let title: String?
+    var icon: String? = nil
+    var tint: Color? = nil
+    let content: Content
+
+    init(_ title: String? = nil, icon: String? = nil, tint: Color? = nil,
+         @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.tint = tint
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let title {
+                HStack(spacing: 8) {
+                    if let icon {
+                        Image(systemName: icon)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(tint ?? Palette.series1)
+                    }
+                    Text(title).font(.headline)
+                }
+            }
+            content
+        }
+        .glassCard()
+        .overlay(alignment: .topLeading) {
+            // A short colored rule instead of a full wash of the panel.
+            if let tint {
+                Capsule().fill(tint).frame(width: 3, height: 22)
+                    .padding(.leading, 5).padding(.top, 15)
+            }
+        }
+    }
+}
+
+private struct RecoveryCard: View {
+    let signal: RecoverySignal
+
+    var body: some View {
+        Card(tint: color) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.title2).foregroundStyle(color)
+                Text(CoachContext.label(signal.level)).font(.title2.bold())
+                Spacer()
+                Text("Recovery").font(.subheadline).foregroundStyle(.secondary)
+            }
+            ForEach(signal.reasons, id: \.self) { r in
+                Text(r).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Text("A rough guide from resting HR and HRV against your own baseline, not a diagnosis.")
+                .font(.caption2).foregroundStyle(.tertiary)
+        }
+    }
+
+    private var icon: String {
+        switch signal.level {
+        case .good: return "checkmark.circle.fill"
+        case .normal: return "minus.circle.fill"
+        case .caution: return "exclamationmark.triangle.fill"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    private var color: Color { Palette.color(for: signal.level) }
+}
+
+private struct StatGrid: View {
+    let record: DayRecord
+    let rhrBaseline: Double?
+
+    private let keys: [MetricKey] = [.rhr, .hrv, .sleep, .vo2, .steps, .exerciseMin, .activeCal, .weight]
+
+    var body: some View {
+        let present = keys.filter { record.metrics[$0] != nil }
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            ForEach(present, id: \.self) { key in
+                StatTile(key: key, value: record.metrics[key]!, note: note(for: key))
+            }
+        }
+    }
+
+    private func note(for key: MetricKey) -> String? {
+        switch key {
+        case .rhr:
+            guard let base = rhrBaseline, let v = record.metrics[.rhr] else { return nil }
+            let d = Int((v - base).rounded())
+            return d == 0 ? "at 4-wk avg" : "\(d > 0 ? "+" : "−")\(abs(d)) vs 4-wk avg"
+        case .steps, .exerciseMin, .activeCal: return "yesterday"
+        case .hrv: return "overnight to noon"
+        case .vo2, .weight: return "latest"
+        default: return nil
+        }
+    }
+}
+
+private struct StatTile: View {
+    let key: MetricKey
+    let value: Double
+    let note: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(key.title).font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(display).font(.title2.bold()).monospacedDigit()
+                Text(key.unitLabel).font(.caption).foregroundStyle(.secondary)
+            }
+            if let note { Text(note).font(.caption2).foregroundStyle(.tertiary) }
+        }
+        .glassCard(radius: 14, padding: 12)
+        .overlay(alignment: .leading) {
+            Capsule().fill(Palette.color(for: key)).frame(width: 3, height: 20).padding(.leading, 5)
+        }
+    }
+
+    private var display: String {
+        key == .steps ? Int(value).formatted() : key.format(value)
+    }
+}
+
+private struct TrendCard: View {
+    let title: String
+    let unit: String
+    let points: [DailyPoint]
+    let rolling: [DailyPoint]?
+    let showAverage: Bool
+    let caption: String
+
+    @State private var selected: Date?
+
+    private var average: Double? { Stats.mean(points.map(\.value)) }
+
+    private var icon: String { showAverage ? "heart.fill" : "waveform.path.ecg" }
+    private var tint: Color { showAverage ? Palette.series5 : Palette.series3 }
+
+    private var selectedPoint: DailyPoint? {
+        guard let selected else { return nil }
+        return points.min { abs($0.day.timeIntervalSince(selected)) < abs($1.day.timeIntervalSince(selected)) }
+    }
+
+    var body: some View {
+        Card(title, icon: icon, tint: tint) {
+            if points.count < 2 {
+                Text("Not enough data yet.").foregroundStyle(.secondary)
+            } else {
+                readout
+                Chart {
+                    if showAverage, let average {
+                        RuleMark(y: .value("4-week average", average))
+                            .foregroundStyle(Palette.muted.opacity(0.6))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    }
+                    if let rolling {
+                        ForEach(points) { p in
+                            PointMark(x: .value("Day", p.day, unit: .day), y: .value(title, p.value))
+                                .foregroundStyle(Palette.series1.opacity(0.45))
+                                .symbolSize(28)
+                        }
+                        ForEach(rolling) { p in
+                            LineMark(x: .value("Day", p.day, unit: .day), y: .value("7-day average", p.value))
+                                .foregroundStyle(Palette.series1)
+                                .lineStyle(StrokeStyle(lineWidth: 2))
+                                .interpolationMethod(.monotone)
+                        }
+                    } else {
+                        ForEach(points) { p in
+                            LineMark(x: .value("Day", p.day, unit: .day), y: .value(title, p.value))
+                                .foregroundStyle(Palette.series1)
+                                .lineStyle(StrokeStyle(lineWidth: 2))
+                                .interpolationMethod(.monotone)
+                            PointMark(x: .value("Day", p.day, unit: .day), y: .value(title, p.value))
+                                .foregroundStyle(Palette.series1)
+                                .symbolSize(18)
+                        }
+                    }
+                    if let s = selectedPoint {
+                        RuleMark(x: .value("Selected", s.day, unit: .day))
+                            .foregroundStyle(Palette.muted.opacity(0.4))
+                    }
+                }
+                .chartYScale(domain: .automatic(includesZero: false))
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: 7)) { _ in
+                        AxisGridLine().foregroundStyle(Color(.separator).opacity(0.5))
+                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(Color(.separator).opacity(0.5))
+                        AxisValueLabel()
+                    }
+                }
+                .chartXSelection(value: $selected)
+                .frame(height: 170)
+                .accessibilityLabel(Text("\(title), last \(points.count) days"))
+                Text(caption).font(.caption2).foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    @ViewBuilder private var readout: some View {
+        if let s = selectedPoint {
+            Text("\(s.day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())): \(Int(s.value.rounded())) \(unit)")
+                .font(.subheadline.monospacedDigit())
+        } else if let last = points.last {
+            Text("Latest \(Int(last.value.rounded())) \(unit)" + (average.map { " · 4-wk avg \(Int($0.rounded()))" } ?? ""))
+                .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct WeeklyLoadCard: View {
+    let loads: [WeeklyLoad]
+    var ignored: Int = 0
+    @Environment(\.calendar) private var calendar
+
+    /// One bar per week for the whole window, including weeks with nothing in them, and a plain
+    /// string category on the x axis. A date axis with a `.weekOfYear` unit sizes its bars from
+    /// the data's own spread, so a sparse window drew one bar the width of the chart.
+    private struct Column: Identifiable {
+        let label: String
+        let weekStart: Date
+        let slices: [WeeklyLoad]
+        var id: Date { weekStart }
+        var total: Double { slices.reduce(0) { $0 + $1.hours } }
+    }
+
+    private var columns: [Column] {
+        guard let first = loads.map(\.weekStart).min(), let last = loads.map(\.weekStart).max() else { return [] }
+        let byWeek = Dictionary(grouping: loads, by: \.weekStart)
+        var out: [Column] = []
+        var w = calendar.startOfDay(for: first)
+        while w <= last, out.count < 26 {
+            let slices = (byWeek[w] ?? [])
+                .filter { $0.hours > 0 }
+                .sorted { sportOrder($0.sport) < sportOrder($1.sport) }
+            out.append(Column(label: w.formatted(.dateTime.month(.defaultDigits).day()),
+                              weekStart: w, slices: slices))
+            guard let next = calendar.date(byAdding: .weekOfYear, value: 1, to: w) else { break }
+            w = next
+        }
+        return out
+    }
+
+    private func sportOrder(_ s: Sport) -> Int { Sport.allCases.firstIndex(of: s) ?? 99 }
+
+    private var thisWeek: Column? { columns.last }
+    private var peak: Double { max(columns.map(\.total).max() ?? 0, 1) }
+
+    /// Eight labels don't fit across a phone, so past six weeks show every other one.
+    private var labelStride: Int { columns.count > 6 ? 2 : 1 }
+
+    var body: some View {
+        Card("Training hours per week", icon: "chart.bar.fill", tint: Palette.series2) {
+            if columns.isEmpty {
+                Text("No workouts in the last 8 weeks.").foregroundStyle(.secondary)
+            } else {
+                Chart {
+                    ForEach(columns) { col in
+                        ForEach(col.slices) { l in
+                            BarMark(x: .value("Week", col.label),
+                                    y: .value("Hours", l.hours),
+                                    width: .ratio(0.62))
+                                .foregroundStyle(by: .value("Sport", l.sport.rawValue))
+                                .cornerRadius(3)
+                        }
+                    }
+                }
+                .chartForegroundStyleScale(domain: Sport.allCases.map(\.rawValue),
+                                           range: Sport.allCases.map { Palette.color(for: $0) })
+                .chartLegend(position: .top, alignment: .leading, spacing: 8)
+                .chartXAxis {
+                    AxisMarks(values: columns.map(\.label)) { value in
+                        if let label = value.as(String.self),
+                           let i = columns.firstIndex(where: { $0.label == label }),
+                           i % labelStride == 0 || i == columns.count - 1 {
+                            AxisValueLabel {
+                                Text(label).font(.caption2)
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(Color(.separator).opacity(0.4))
+                        AxisValueLabel()
+                    }
+                }
+                .chartYScale(domain: 0...(peak * 1.15))
+                .frame(height: 200)
+
+                // Text table: the colors alone never carry the numbers.
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("This week").font(.caption.bold()).foregroundStyle(.secondary)
+                        Spacer()
+                        if let t = thisWeek, t.total > 0 {
+                            Text(String(format: "%.1f h total", t.total))
+                                .font(.caption.monospacedDigit().bold())
+                        }
+                    }
+                    if let t = thisWeek, !t.slices.isEmpty {
+                        ForEach(t.slices) { l in
+                            HStack(spacing: 6) {
+                                Circle().fill(Palette.color(for: l.sport)).frame(width: 8, height: 8)
+                                Text(l.sport.rawValue).font(.caption)
+                                Spacer()
+                                Text(String(format: "%.1f h", l.hours)).font(.caption.monospacedDigit())
+                            }
+                        }
+                    } else {
+                        Text("No workouts yet").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 2)
+
+                if ignored > 0 {
+                    Label("\(ignored) session\(ignored == 1 ? "" : "s") longer than \(Int(Stats.maxSessionHours)) h left out — almost certainly a workout that was never ended in Health.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2).foregroundStyle(Palette.warning)
+                        .padding(.top, 4)
+                }
+            }
+        }
+    }
+}
+
+private struct RecentWorkoutsCard: View {
+    let workouts: [WorkoutSummary]
+
+    var body: some View {
+        Card("Recent workouts", icon: "list.bullet.rectangle", tint: Palette.series7) {
+            if workouts.isEmpty {
+                Text("No recent workouts.").foregroundStyle(.secondary)
+            }
+            ForEach(workouts) { w in
+                HStack(spacing: 12) {
+                    Image(systemName: w.sport.symbol)
+                        .frame(width: 28)
+                        .foregroundStyle(Palette.color(for: w.sport))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(w.name).font(.subheadline.bold())
+                        Text(w.start.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(detail(w)).font(.caption.monospacedDigit())
+                        if let hr = w.avgHR {
+                            Text("avg \(Int(hr.rounded())) bpm").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                if w.id != workouts.last?.id { Divider() }
+            }
+        }
+    }
+
+    private func detail(_ w: WorkoutSummary) -> String {
+        var parts = ["\(Int((w.duration / 60).rounded())) min"]
+        if let m = w.distanceMeters, m > 0 { parts.append(DistanceFormat.string(meters: m, sport: w.sport)) }
+        return parts.joined(separator: " · ")
+    }
+}

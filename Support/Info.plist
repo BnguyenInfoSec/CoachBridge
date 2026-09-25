@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Coach Bridge</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<!-- Only HTTPS via the system stack: exempt, so TestFlight stops asking on every upload. -->
+	<!-- Let the UI run at the display's full rate (120 Hz on ProMotion) instead of being
+	     capped at 60. -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+		<string>healthkit</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<!-- HealthKit: read-only. No NSHealthUpdateUsageDescription because the app never writes. -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>Coach Bridge reads your resting heart rate, HRV, sleep, respiratory rate, wrist temperature, blood oxygen, VO2 max, heart-rate recovery, walking heart rate, weight, body fat, activity totals, workouts (with heart rate, power, cadence and distance) and running form metrics. It shows them on your dashboard and once a day saves a summary to a Coach folder in your own Google Drive. If you use the in-app Coach chat with Health sharing on, a summary is sent to Anthropic's Claude API with your message. Nothing is sent anywhere else.</string>
+
+	<!-- Calendar sync: read busy times/titles, write sessions to a separate Training calendar. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Coach Bridge reads your calendars so training fits around your schedule, and adds your planned sessions to a separate Training calendar. When you refresh the Plan tab, event times and titles for the next week are sent to Anthropic's Claude API so it can plan around them. Locations, notes and attendees are never read or sent.</string>
+
+	<!-- Weather: one-time approximate location when you tap "Use my current location". -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Coach Bridge uses your approximate location, once, to set where your training forecast comes from. Only rounded coordinates are sent to the weather service; your location isn't tracked.</string>
+
+	<!-- M3: daily BGAppRefreshTask as backup to HealthKit background delivery. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).daily-export</string>
+	</array>
+
+	<!-- M2: Google Sign-In. Values come from Config/Secrets.xcconfig. -->
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google-oauth-redirect</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,13 @@
+// Shared build settings for Coach Bridge.
+// Change BUNDLE_ID_PREFIX once, before creating the Google OAuth client —
+// the Google iOS client is tied to the exact bundle ID.
+
+BUNDLE_ID_PREFIX = com.example.changeme
+DEVELOPMENT_TEAM =
+
+// Placeholders so the app builds before Google is set up.
+// Real values live in Secrets.xcconfig (git-ignored), which overrides these.
+GOOGLE_CLIENT_ID = NOT_SET
+GOOGLE_REVERSED_CLIENT_ID = com.example.notset
+
+#include? "Secrets.xcconfig"
