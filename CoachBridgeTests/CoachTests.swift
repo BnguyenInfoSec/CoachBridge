@@ -114,7 +114,7 @@ final class CoachContextTests: XCTestCase {
             today: DayRecord(date: "2026-09-22", exportedAt: .now, metrics: [.rhr: 46, .steps: 9120]),
             rhr: [], hrv: [], hrvRolling: [], weekly: [], recent: [],
             recovery: RecoverySignal(level: .normal, reasons: ["Resting HR 46 bpm"]),
-            generatedAt: .now)
+            ignoredLongSessions: 0, generatedAt: .now)
     }
 
     func testSummaryMarksYesterdayMetricsAndMissingData() {
