@@ -11,7 +11,7 @@ struct RootView: View {
     var body: some View {
         TabView {
             DashboardView()
-                .tabItem { Label("Today", systemImage: "heart.text.square") }
+                .tabItem { Label("Dashboard", systemImage: "gauge.with.needle") }
             ChatView()
                 .tabItem { Label("Coach", systemImage: "bubble.left.and.text.bubble.right") }
             PlanCalendarView()

@@ -1,30 +1,55 @@
 import Charts
 import SwiftUI
 
-/// Native dashboard: recovery signal, today's key numbers, 4-week trends, weekly training load.
+/// The first tab. Training comes first — where you are in the season, how this week is going,
+/// what's next — then a Today section with recovery and the day's numbers, then the trends.
 struct DashboardView: View {
     @EnvironmentObject private var dashboard: DashboardModel
+    @EnvironmentObject private var plan: PlanModel
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        // Hoisted: every card below reads the engine, and `day(_:)` for the whole week.
+        let engine = plan.engine
+        let today = engine.calendar.startOfDay(for: .now)
+        let monday = engine.monday(of: today)
+        let week = (0..<7).map { plan.day(engine.add(monday, days: $0)) }
+        let upcoming = (0..<8).map { plan.day(engine.add(today, days: $0)) }
+
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    if plan.needsSetup {
+                        SetupPromptCard()
+                    } else {
+                        SeasonCard(engine: engine, today: today)
+                        ThisWeekCard(days: week, today: today)
+                        UpNextCard(days: upcoming, today: today)
+                    }
+                    if let d = dashboard.data {
+                        WeeklyLoadCard(loads: d.weekly, ignored: d.ignoredLongSessions)
+                    }
+
+                    SectionTitle("Today")
+                    if !plan.needsSetup, let day = week.first(where: { $0.date == today }) {
+                        TodaySessionsCard(day: day)
+                    }
                     if let d = dashboard.data {
                         RecoveryCard(signal: d.recovery)
                         StatGrid(record: d.today, rhrBaseline: Stats.mean(d.rhr.dropLast().map(\.value)))
+
+                        SectionTitle("Trends")
                         TrendCard(title: "Resting heart rate", unit: "bpm", points: d.rhr,
                                   rolling: nil, showAverage: true,
                                   caption: "Daily resting HR, last 4 weeks. Dashed line: 4-week average.")
                         TrendCard(title: "Heart rate variability", unit: "ms", points: d.hrv,
                                   rolling: d.hrvRolling, showAverage: false,
                                   caption: "Dots: daily mean (mostly daytime readings). Line: 7-day average.")
-                        WeeklyLoadCard(loads: d.weekly, ignored: d.ignoredLongSessions)
                         RecentWorkoutsCard(workouts: d.recent)
                         Text("Updated \(d.generatedAt.formatted(date: .omitted, time: .shortened))")
                             .font(.caption).foregroundStyle(.secondary)
                     } else if dashboard.isLoading {
-                        ProgressView("Reading Health…").padding(.top, 80)
+                        ProgressView("Reading Health…").padding(.top, 40)
                     } else if let err = dashboard.errorText {
                         ContentUnavailableView("Couldn't read Health data", systemImage: "heart.slash",
                                                description: Text(err))
@@ -35,10 +60,233 @@ struct DashboardView: View {
             }
             .screenBackground(Palette.Tab.today)
             .softScrollEdges()
-            .navigationTitle("Today")
-            .refreshable { await dashboard.refresh() }
+            .navigationTitle("Dashboard")
+            .navigationDestination(for: PlanRoute.self) { route in
+                switch route {
+                case .session(let s, let d, let change, let slot): SessionDetailView(session: s, date: d, change: change, slot: slot)
+                case .workout(let w): WorkoutDetailView(summary: w)
+                }
+            }
+            .refreshable {
+                await dashboard.refresh()
+                await plan.loadWorkouts(from: monday, to: engine.add(monday, days: 7))
+            }
+            .task { await plan.loadWorkouts(from: monday, to: engine.add(monday, days: 7)) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { Task { await dashboard.ensureLoaded() } }
+            }
+        }
+    }
+}
+
+private struct SectionTitle: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.title2.bold())
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+// MARK: - Training
+
+private struct SetupPromptCard: View {
+    var body: some View {
+        Card("Set up your plan", icon: "figure.run", tint: Palette.series1) {
+            Text("Tell Coach Bridge what you're training for and how much time you have, and this page fills with your season, your week and what's next.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            NavigationLink {
+                ProfileSetupView()
+            } label: {
+                Label("Set up my plan", systemImage: "arrow.right.circle.fill").font(.headline)
+            }
+        }
+    }
+}
+
+/// Where you are in the season: countdown, phase, and the whole plan as one ribbon.
+private struct SeasonCard: View {
+    let engine: PlanEngine
+    let today: Date
+
+    var body: some View {
+        let ph = engine.phase(for: today)
+        let days = engine.daysToRace(from: today)
+        let named = engine.blueprint.hasEvent || !engine.profile.eventName.isEmpty
+        Card(named ? engine.raceName : "Your plan", icon: "flag.checkered",
+             tint: Palette.color(forPhase: ph.id)) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(days)").font(.system(size: 40, weight: .bold, design: .rounded)).monospacedDigit()
+                Text(named ? "days to go" : "days left in the plan")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            if let pw = engine.phaseWeek(today) { PhaseChip(week: pw) }
+            PhaseRibbon(engine: engine, date: today)
+            Text(ph.focus).font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// This week against the plan: hours, and a day-by-day strip of what's done.
+private struct ThisWeekCard: View {
+    let days: [DayPlan]
+    let today: Date
+
+    private struct Day: Identifiable {
+        let id: String
+        let letter: String
+        let planned: Bool
+        let done: Bool
+        let isToday: Bool
+        let isPast: Bool
+        let label: String
+    }
+
+    var body: some View {
+        let training = { (d: DayPlan) in d.sessions.filter { $0.kind != .rest } }
+        let plannedMin = days.flatMap(training).compactMap { $0.rx?.durationMin }.reduce(0, +)
+        let doneMin = days.flatMap(\.done).reduce(0) { $0 + Int($1.duration / 60) }
+        let left = days.filter { $0.date >= today && $0.done.isEmpty }.flatMap(training).count
+        let strip = days.map { d in
+            Day(id: d.iso,
+                letter: String(d.date.formatted(.dateTime.weekday(.narrow))),
+                planned: !training(d).isEmpty, done: !d.done.isEmpty,
+                isToday: d.date == today, isPast: d.date < today,
+                label: d.date.formatted(.dateTime.weekday(.wide)) + ": "
+                    + (!d.done.isEmpty ? "done" : training(d).isEmpty ? "rest" : d.date < today ? "missed" : "planned"))
+        }
+
+        Card("This week", icon: "chart.bar.fill", tint: Palette.series1) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(Fmt.hours(doneMin)).font(.title2.bold()).monospacedDigit()
+                Text("of \(Fmt.hours(plannedMin)) planned").font(.subheadline).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            ProgressView(value: Double(min(doneMin, max(plannedMin, 1))), total: Double(max(plannedMin, 1)))
+                .tint(Palette.series1)
+                .accessibilityLabel("Hours done this week")
+            HStack(spacing: 0) {
+                ForEach(strip) { d in
+                    VStack(spacing: 5) {
+                        Text(d.letter)
+                            .font(.caption2.weight(d.isToday ? .bold : .regular))
+                            .foregroundStyle(d.isToday ? Palette.series1 : .secondary)
+                        ZStack {
+                            if d.done {
+                                Circle().fill(Palette.good)
+                                Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+                            } else if d.planned {
+                                Circle().strokeBorder(d.isPast ? Color.secondary.opacity(0.4) : Palette.series1, lineWidth: 2)
+                            } else {
+                                Circle().fill(Color.secondary.opacity(0.15))
+                            }
+                        }
+                        .frame(width: 22, height: 22)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(d.label)
+                }
+            }
+            Text(left == 0 ? "Nothing left planned this week." : "\(left) session\(left == 1 ? "" : "s") left this week.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The next few sessions, each opening the editor.
+private struct UpNextCard: View {
+    @EnvironmentObject private var calendarSync: CalendarSync
+    let days: [DayPlan]
+    let today: Date
+
+    private struct Item: Identifiable {
+        let id: String
+        let session: PlanSession
+        let day: DayPlan
+        let slot: DateInterval?
+    }
+
+    var body: some View {
+        let items = days.flatMap { day in
+            day.sessions.enumerated()
+                .filter { $0.element.kind != .rest && !(day.date == today && !day.done.isEmpty) }
+                .map { Item(id: "\(day.iso)#\($0.offset)", session: $0.element, day: day,
+                            slot: calendarSync.slot(for: day, index: $0.offset)) }
+        }
+        .filter { $0.day.date > today || ($0.slot?.end ?? .distantFuture) > .now }
+        .prefix(3)
+
+        Card("Coming up", icon: "calendar", tint: Palette.series3) {
+            if items.isEmpty {
+                Text("Nothing planned in the next week.").font(.subheadline).foregroundStyle(.secondary)
+            }
+            ForEach(Array(items)) { item in
+                NavigationLink(value: PlanRoute.session(item.session, item.day.date, item.day.change, item.slot)) {
+                    HStack(spacing: 12) {
+                        Image(systemName: item.session.kind.symbol)
+                            .font(.title3)
+                            .foregroundStyle(Palette.color(for: item.session.kind))
+                            .frame(width: 30)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.session.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                            Text(when(item)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if let m = item.session.rx?.durationMin {
+                            Text(Fmt.hours(m)).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func when(_ item: Item) -> String {
+        let cal = Calendar.current
+        let day = cal.isDate(item.day.date, inSameDayAs: today) ? "Today"
+            : cal.isDate(item.day.date, inSameDayAs: cal.date(byAdding: .day, value: 1, to: today)!) ? "Tomorrow"
+            : item.day.date.formatted(.dateTime.weekday(.wide))
+        guard let slot = item.slot else { return day }
+        return "\(day) · \(slot.start.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+/// Today's plan, and whether it's done.
+private struct TodaySessionsCard: View {
+    @EnvironmentObject private var calendarSync: CalendarSync
+    let day: DayPlan
+
+    var body: some View {
+        let training = day.sessions.enumerated().filter { $0.element.kind != .rest }
+        Card("Today's training", icon: "figure.mixed.cardio", tint: Palette.series2) {
+            if training.isEmpty {
+                Text("Rest day. Recovery is training too.").font(.subheadline).foregroundStyle(.secondary)
+            }
+            ForEach(training, id: \.offset) { i, s in
+                NavigationLink(value: PlanRoute.session(s, day.date, day.change, calendarSync.slot(for: day, index: i))) {
+                    SessionLine(session: s, slot: calendarSync.slot(for: day, index: i),
+                                unplaced: calendarSync.isUnplaced(day, index: i))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            ForEach(day.done) { w in
+                NavigationLink(value: PlanRoute.workout(w)) {
+                    Label("\(w.name) · \(Fmt.minutes(w.duration))", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline).foregroundStyle(Palette.good)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
