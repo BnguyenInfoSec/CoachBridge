@@ -24,7 +24,7 @@ final class CustomSessionTests: XCTestCase {
 
     func testLineForClaude() {
         XCTAssertEqual(sample().line(),
-                       "2026-09-26 06:00 · Run · Group run with the guys · 50 min · 3–5 miles, easy, meet at the pier")
+                       "2026-09-26 06:00 · run · Group run with the guys · 50 min · 3–5 miles, easy, meet at the pier")
     }
 
     func testRoundTripsThroughJSON() throws {
