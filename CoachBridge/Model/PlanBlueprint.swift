@@ -344,8 +344,10 @@ enum WeekBuilder {
     /// Easier weeks at the start of a phase, fuller ones by the end; every fourth week eases off.
     static func rampFraction(_ weekIndex: Int) -> Double {
         let cycle = weekIndex % 4
-        let base = min(1, Double(weekIndex) / 12)
-        return cycle == 3 ? base * 0.7 : base
+        // A recovery week is 70% of the week before it, not of its own spot on the ramp: early in
+        // the plan the ramp climbs fast enough that 70% of week 3 (0.175) out-loaded week 2 (0.167).
+        guard cycle == 3 else { return min(1, Double(weekIndex) / 12) }
+        return min(1, Double(weekIndex - 1) / 12) * 0.7
     }
 
     static func isRecoveryWeek(_ weekIndex: Int) -> Bool { weekIndex % 4 == 3 }
