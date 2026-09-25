@@ -92,20 +92,10 @@ final class PlanModel: ObservableObject {
     }
 
     /// Fills anything left blank (by Claude or by a hand-entered session) from the plan's own rules.
-    private func merged(_ s: PlanSession, on d: Date, rx: Prescriber) -> PlanSession {
+    func merged(_ s: PlanSession, on d: Date, rx: Prescriber) -> PlanSession {
         guard let base = rx.prescription(for: s, on: d) else { return s }
-        var r = s.rx ?? Prescription()
-        r.durationMin = r.durationMin ?? base.durationMin
-        r.distance = r.distance ?? base.distance
-        r.intensity = r.intensity ?? base.intensity
-        r.heartRate = r.heartRate ?? base.heartRate
-        r.power = r.power ?? base.power
-        r.pace = r.pace ?? base.pace
-        r.fuelBefore = r.fuelBefore ?? base.fuelBefore
-        r.fuelDuring = r.fuelDuring ?? base.fuelDuring
-        r.fuelAfter = r.fuelAfter ?? base.fuelAfter
         var out = s
-        out.rx = r
+        out.rx = (s.rx ?? Prescription()).filling(from: base)
         return out
     }
 

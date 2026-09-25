@@ -123,7 +123,7 @@ struct PlanCalendarView: View {
             .sheet(isPresented: $showPlaces) {
                 NavigationStack { VenueLibraryView() }
             }
-            .sheet(isPresented: $showAdd) { CustomSessionEditor(existing: nil, defaultDate: selected) }
+            .sheet(isPresented: $showAdd) { AddSessionSheet(defaultDate: selected) }
             .sheet(isPresented: $showSettings, onDismiss: {
                 Task { await weather.refresh(); await AppServices.shared.syncSchedule() }
             }) { PlanSettingsView() }
@@ -761,7 +761,7 @@ private struct DayDetail: View {
                     .font(.subheadline.weight(.semibold))
             }
             .padding(.top, 2)
-            .sheet(isPresented: $showAdd) { CustomSessionEditor(existing: nil, defaultDate: day.date) }
+            .sheet(isPresented: $showAdd) { AddSessionSheet(defaultDate: day.date) }
 
             Text("Recorded").font(.headline).padding(.top, 4)
             if day.done.isEmpty {

@@ -4,65 +4,83 @@ import WorkoutKit
 
 // MARK: - Planned session
 
+/// One session, editable in place. Every field is a live control: on the athlete's own session
+/// it edits that session; on a planned one the first change adopts it as theirs (fixed, and
+/// planned around by Claude — the same rule as a session they add).
+///
+/// Edits save on the phone as you go and never call Claude on their own. The week is reworked
+/// only when the athlete taps "Rework my week", so a string of small edits costs one request.
 struct SessionDetailView: View {
     @EnvironmentObject private var weather: WeatherModel
     @EnvironmentObject private var watch: WatchScheduler
     @EnvironmentObject private var plan: PlanModel
+    @EnvironmentObject private var dashboard: DashboardModel
+    @EnvironmentObject private var calendarSync: CalendarSync
+    @Environment(\.dismiss) private var dismiss
     let session: PlanSession
     let date: Date
     let change: PlanUpdate.DayChange?
     var slot: DateInterval? = nil
 
+    /// The athlete's version. Nil while a planned session is untouched.
+    @State private var draft: CustomSession?
+    /// Edited since Claude last saw it — shows the rework button.
+    @State private var unsent = false
     @State private var preview: WorkoutPlan?
     @State private var showPreview = false
-    @State private var showEdit = false
+    @State private var confirmDelete = false
 
     var body: some View {
-        let rx = session.rx ?? Prescription()
+        // Hoisted: `plan.engine` rebuilds the engine on every access.
+        let engine = plan.engine
+        let shown = displayed(engine: engine)
+        let rx = shown.rx ?? Prescription()
         List {
             Section {
-                HStack(spacing: 12) {
-                    Image(systemName: session.kind.symbol)
-                        .font(.title2)
-                        .foregroundStyle(Palette.color(for: session.kind))
-                        .frame(width: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(session.title).font(.title3.bold())
-                        Text(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                }
-                if !session.detail.isEmpty { Text(session.detail) }
-                if let c = change, !session.addedByAthlete {
+                if let c = change, draft == nil, !session.addedByAthlete {
                     Label(c.reason, systemImage: "sparkles").font(.subheadline).foregroundStyle(Palette.series7)
                 }
-                if session.addedByAthlete {
-                    Label("You added this session — Claude plans the week around it.", systemImage: "person.fill.checkmark")
+                if let d = draft {
+                    Label(d.replaces == nil
+                          ? "Your session — Claude plans the week around it."
+                          : "You edited this planned session, so it's yours now — Claude plans around it.",
+                          systemImage: "person.fill.checkmark")
                         .font(.subheadline).foregroundStyle(Palette.series4)
-                    Button("Edit or delete") { showEdit = true }
+                } else {
+                    Label("Tap any field to change it. The session becomes yours and stays as you set it.",
+                          systemImage: "hand.tap")
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
             }
 
-            if let slot {
-                Section("When") {
-                    row("Scheduled", "\(slot.start.formatted(date: .omitted, time: .shortened))–\(slot.end.formatted(date: .omitted, time: .shortened)) · in your Training calendar", "calendar")
-                    if let w = weather.forecast?.at(slot.start) {
-                        row("Forecast at start", WeatherText.hour(w), w.feelsF >= Forecast.heatThresholdF ? "thermometer.sun.fill" : "cloud.sun")
-                        if w.feelsF >= Forecast.heatThresholdF {
-                            Text("Feels like \(Int(w.feelsF.rounded()))°F at start. Plan rule: above ~90°F, go at first light or ride the Bayshore, and add ~250 ml fluid per hour.")
-                                .font(.caption).foregroundStyle(Palette.warning)
+            SessionFields(session: editable(engine: engine), defaults: rx, calendar: engine.calendar)
+
+            if unsent {
+                Section {
+                    Button {
+                        Task { await rework() }
+                    } label: {
+                        HStack {
+                            Label("Rework my week around this", systemImage: "sparkles")
+                            Spacer()
+                            if plan.isUpdating { ProgressView() }
                         }
                     }
+                    .disabled(plan.isUpdating)
+                } footer: {
+                    Text("Your changes are saved. Claude only reworks the rest of the week when you ask — one request, at most once a minute.")
                 }
             }
 
-            Section("Targets") {
-                row("Duration", rx.durationMin.map { Fmt.hours($0) }, "clock")
-                row("Distance", rx.distance, "ruler")
-                row("Intensity", rx.intensity, "gauge.with.dots.needle.33percent")
-                row("Heart rate", rx.heartRate, "heart.fill")
-                row("Power", rx.power, "bolt.fill")
-                row("Pace", rx.pace, "speedometer")
+            if let slot, draft == nil {
+                Section("When") {
+                    row("Scheduled", "\(slot.start.formatted(date: .omitted, time: .shortened))–\(slot.end.formatted(date: .omitted, time: .shortened)) · in your Training calendar", "calendar")
+                    forecast(at: slot.start)
+                }
+            } else if let d = draft, let start = Scheduler.time(d.startTime, on: engine.date(d.date), calendar: engine.calendar) {
+                if weather.forecast?.at(start) != nil {
+                    Section("Weather") { forecast(at: start) }
+                }
             }
 
             Section {
@@ -76,13 +94,13 @@ struct SessionDetailView: View {
             }
 
             if let notes = rx.notes {
-                Section("Notes") { Text(notes) }
+                Section("Plan notes") { Text(notes) }
             }
 
-            if watch.isSupported, WatchScheduler.mapping(for: session) != nil {
+            if watch.isSupported, WatchScheduler.mapping(for: shown) != nil {
                 Section {
                     Button {
-                        preview = watch.previewPlan(session, on: date, plan: plan)
+                        preview = watch.previewPlan(shown, on: engine.date(draft?.date ?? engine.iso(date)), plan: plan)
                         showPreview = preview != nil
                     } label: {
                         Label("Preview & send to Apple Watch", systemImage: "applewatch")
@@ -91,15 +109,97 @@ struct SessionDetailView: View {
                     Text("Shows the session's steps and alerts, with an option to send it to the Workout app now. The week's sessions are already on your Watch under Workout → Scheduled.")
                 }
             }
+
+            if let d = draft {
+                Section {
+                    Button(d.replaces == nil ? "Delete session" : "Go back to the planned session", role: .destructive) {
+                        confirmDelete = true
+                    }
+                } footer: {
+                    if d.replaces != nil {
+                        Text("Removes your edits and brings back the session the plan had for this day.")
+                    }
+                }
+            }
         }
         .glassRows()
-        .venueBackground(session: session, iso: plan.engine.iso(date),
-                         accent: Palette.color(for: session.kind))
-        .navigationTitle(session.kind.label)
+        .venueBackground(session: shown, iso: draft?.date ?? engine.iso(date),
+                         accent: Palette.color(for: shown.kind))
+        .navigationTitle(shown.kind.label)
         .navigationBarTitleDisplayMode(.inline)
         .modifier(WorkoutPreviewModifier(plan: preview, isPresented: $showPreview))
-        .sheet(isPresented: $showEdit) {
-            CustomSessionEditor(existing: plan.custom.sessions.first { $0.id == session.customID }, defaultDate: date)
+        .confirmationDialog("Remove your version of this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(draft?.replaces == nil ? "Delete session" : "Go back to the plan", role: .destructive) { remove() }
+        }
+        .onAppear {
+            if draft == nil, let id = session.customID {
+                draft = plan.custom.sessions.first { $0.id == id }
+            }
+        }
+        // Debounced save: typing a title writes once it pauses, not on every keystroke, which
+        // would redraw the whole calendar behind this screen each time.
+        .task(id: draft) {
+            guard let d = draft, plan.custom.sessions.first(where: { $0.id == d.id }) != d.sanitized() else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            plan.custom.save(d)
+        }
+        .onDisappear {
+            guard unsent, let d = draft else { return }
+            plan.custom.save(d)                                     // flush a pending debounce
+            Task { await AppServices.shared.syncSchedule() }        // free: calendar and Watch only
+        }
+    }
+
+    // MARK: Editing
+
+    /// The planned session as it would look once adopted — built on demand, stored only on the
+    /// first real change.
+    private func editable(engine: PlanEngine) -> Binding<CustomSession> {
+        Binding {
+            draft ?? CustomSession.adopting(session, on: engine.iso(date), startTime: slotTime(engine))
+        } set: { new in
+            draft = new
+            unsent = true
+        }
+    }
+
+    private func slotTime(_ engine: PlanEngine) -> String? {
+        guard let s = slot?.start else { return nil }
+        let c = engine.calendar.dateComponents([.hour, .minute], from: s)
+        return String(format: "%02d:%02d", c.hour ?? 6, c.minute ?? 0)
+    }
+
+    /// What to show: the athlete's version with the plan's defaults filled in, or the planned session.
+    private func displayed(engine: PlanEngine) -> PlanSession {
+        guard let d = draft else { return session }
+        return plan.merged(d.planSession(), on: engine.date(d.date), rx: Prescriber(engine: engine))
+    }
+
+    private func rework() async {
+        unsent = false
+        if let d = draft { plan.custom.save(d) }
+        await AppServices.shared.syncSchedule()
+        await plan.requestUpdate(dashboard: dashboard, calendar: calendarSync, weather: weather)
+        await AppServices.shared.syncSchedule()
+    }
+
+    private func remove() {
+        guard let d = draft else { return }
+        plan.custom.delete(d)
+        unsent = false
+        Task { await AppServices.shared.syncSchedule() }
+        dismiss()
+    }
+
+    @ViewBuilder
+    private func forecast(at start: Date) -> some View {
+        if let w = weather.forecast?.at(start) {
+            row("Forecast at start", WeatherText.hour(w), w.feelsF >= Forecast.heatThresholdF ? "thermometer.sun.fill" : "cloud.sun")
+            if w.feelsF >= Forecast.heatThresholdF {
+                Text("Feels like \(Int(w.feelsF.rounded()))°F at start. Plan rule: above ~90°F, go at first light or ride the Bayshore, and add ~250 ml fluid per hour.")
+                    .font(.caption).foregroundStyle(Palette.warning)
+            }
         }
     }
 

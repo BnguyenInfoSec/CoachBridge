@@ -46,6 +46,22 @@ struct Prescription: Codable, Hashable, Sendable {
     var fuelDuring: String?
     var fuelAfter: String?
     var notes: String?
+
+    /// This prescription with anything left blank taken from `base` — how a session from Claude
+    /// or the athlete gets the plan's own targets and fuelling for whatever they didn't specify.
+    func filling(from base: Prescription) -> Prescription {
+        var r = self
+        r.durationMin = r.durationMin ?? base.durationMin
+        r.distance = r.distance ?? base.distance
+        r.intensity = r.intensity ?? base.intensity
+        r.heartRate = r.heartRate ?? base.heartRate
+        r.power = r.power ?? base.power
+        r.pace = r.pace ?? base.pace
+        r.fuelBefore = r.fuelBefore ?? base.fuelBefore
+        r.fuelDuring = r.fuelDuring ?? base.fuelDuring
+        r.fuelAfter = r.fuelAfter ?? base.fuelAfter
+        return r
+    }
 }
 
 struct PlanSession: Codable, Hashable, Sendable {
