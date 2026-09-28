@@ -67,6 +67,9 @@ targets:
       path: Support/Widgets-Info.plist
       properties:
         CFBundleDisplayName: Coach Bridge
+        # Must match the phone app's, or App Store Connect rejects the upload.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CBAppGroup: group.$(BUNDLE_ID_PREFIX).CoachBridge
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
@@ -90,6 +93,9 @@ targets:
       path: Support/Watch-Info.plist
       properties:
         CFBundleDisplayName: Coach Bridge
+        # Must match the phone app's, or App Store Connect rejects the upload.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true
         WKCompanionAppBundleIdentifier: $(BUNDLE_ID_PREFIX).CoachBridge
         CBAppGroup: group.$(BUNDLE_ID_PREFIX).CoachBridge
@@ -112,6 +118,9 @@ targets:
       path: Support/WatchWidgets-Info.plist
       properties:
         CFBundleDisplayName: Coach Bridge
+        # Must match the phone app's, or App Store Connect rejects the upload.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CBAppGroup: group.$(BUNDLE_ID_PREFIX).CoachBridge
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
