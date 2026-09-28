@@ -290,6 +290,8 @@ struct AthleteProfile: Codable, Equatable, Sendable {
     /// nothing, and a load that fails falls back to an empty profile — so a new non-optional
     /// field would silently wipe everyone's setup. Keep new fields optional.
     var gear: Gear? = nil
+    /// What the athlete eats and drinks, by sport. Optional for the same reason as `gear`.
+    var fuel: FuelPreferences? = nil
 
     func has(_ e: Equipment) -> Bool { equipment.contains(e.rawValue) }
 
@@ -370,6 +372,7 @@ struct AthleteProfile: Codable, Equatable, Sendable {
     func save(_ defaults: UserDefaults = .standard) {
         var clean = self
         clean.gear = gear.map { $0.sanitized() }.flatMap { $0.isEmpty ? nil : $0 }
+        clean.fuel = fuel.map { $0.sanitized() }.flatMap { $0.isEmpty ? nil : $0 }
         if let data = try? JSONEncoder().encode(clean) { defaults.set(data, forKey: Self.storageKey) }
     }
 
@@ -477,6 +480,81 @@ struct Gear: Codable, Equatable, Sendable {
         var model: String = ""
     }
 
+    /// A set of wheels. Most triathletes own two, training and race, and which one goes on the
+    /// bike depends on the course and the wind.
+    struct Wheelset: Codable, Equatable, Identifiable, Sendable {
+        enum Use: String, Codable, CaseIterable, Identifiable, Sendable {
+            case training, race, climbing, gravel, trainer
+            var id: String { rawValue }
+            var label: String {
+                switch self {
+                case .training: return "Training"
+                case .race: return "Race"
+                case .climbing: return "Climbing"
+                case .gravel: return "Gravel"
+                case .trainer: return "Indoor trainer"
+                }
+            }
+        }
+
+        var id = UUID()
+        var name: String = ""
+        var use: Use = .training
+        /// Rim depth. Deep wheels are faster and catch crosswinds.
+        var depthMM: Int? = nil
+        var internalWidthMM: Int? = nil
+        var rim: TirePressure.Rim? = nil
+
+        init(name: String = "", use: Use = .training, depthMM: Int? = nil, internalWidthMM: Int? = nil,
+             rim: TirePressure.Rim? = nil) {
+            self.name = name
+            self.use = use
+            self.depthMM = depthMM
+            self.internalWidthMM = internalWidthMM
+            self.rim = rim
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+            name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
+            use = (try? c.decodeIfPresent(Use.self, forKey: .use)) ?? .training
+            depthMM = try? c.decodeIfPresent(Int.self, forKey: .depthMM)
+            internalWidthMM = try? c.decodeIfPresent(Int.self, forKey: .internalWidthMM)
+            rim = try? c.decodeIfPresent(TirePressure.Rim.self, forKey: .rim)
+        }
+
+        /// A disc is stored as the deepest possible rim, so it counts as the most wind-sensitive.
+        static let disc = 120
+
+        /// Deep enough that a strong crosswind moves the bike around.
+        var isDeep: Bool { (depthMM ?? 0) >= 60 }
+
+        var line: String {
+            let what = name.isEmpty ? "\(use.label.lowercased()) wheels" : name
+            let facts = [depthMM.map { $0 == Self.disc ? "disc" : "\($0) mm deep" }, internalWidthMM.map { "\($0) mm internal" },
+                         rim.map { $0.label.lowercased() }].compactMap { $0 }
+            return what + (facts.isEmpty ? "" : " (\(facts.joined(separator: ", ")))") + ", for \(use.label.lowercased())"
+        }
+    }
+
+    /// Which wheels to fit for an outdoor ride in this wind. Nil when there's no choice to make:
+    /// fewer than two outdoor sets, or no forecast.
+    func wheelAdvice(gustMph: Double?) -> String? {
+        let outdoor = sanitized().wheelsets.filter { $0.use != .trainer }
+        guard outdoor.count >= 2, let gust = gustMph else { return nil }
+        let shallow = outdoor.filter { !$0.isDeep }.min { ($0.depthMM ?? 0) < ($1.depthMM ?? 0) }
+        let deep = outdoor.filter(\.isDeep).max { ($0.depthMM ?? 0) < ($1.depthMM ?? 0) }
+        func name(_ w: Wheelset) -> String { w.name.isEmpty ? "your \(w.use.label.lowercased()) wheels" : w.name }
+        if gust >= Self.gustyMph, let shallow, let deep {
+            return "Gusts to \(Int(gust.rounded())) mph: fit \(name(shallow)) rather than \(name(deep)). Deep rims get pushed around in a crosswind."
+        }
+        return nil
+    }
+
+    /// Where deep rims start to be a handful for most riders.
+    static let gustyMph = 20.0
+
     enum Groupset: String, Codable, CaseIterable, Identifiable, Sendable {
         case duraAceDi2, ultegraDi2, shimano105Di2, shimano105, grxDi2, grx
         case redAXS, forceAXS, forceXPLRAXS, rivalAXS, rivalXPLRAXS, apexAXS, apexXPLRAXS
@@ -545,6 +623,7 @@ struct Gear: Codable, Equatable, Sendable {
     /// True once the athlete edits a pressure by hand; until then pressures follow the
     /// recommendation as the inputs change.
     var pressuresCustom: Bool = false
+    var wheelsets: [Wheelset] = []
 
     init(bike: String = "", tires: String = "", tireSetup: TireSetup? = nil, shoes: [Shoe] = [],
          groupset: Groupset? = nil, gearing: String = "") {
@@ -574,6 +653,7 @@ struct Gear: Codable, Equatable, Sendable {
         frontPSI = try? c.decodeIfPresent(Double.self, forKey: .frontPSI)
         rearPSI = try? c.decodeIfPresent(Double.self, forKey: .rearPSI)
         pressuresCustom = (try? c.decodeIfPresent(Bool.self, forKey: .pressuresCustom)) ?? false
+        wheelsets = (try? c.decodeIfPresent([Wheelset].self, forKey: .wheelsets)) ?? []
     }
 
     /// Pressure for one ride: your saved pressures, or the recommendation, adjusted for rain.
@@ -606,6 +686,7 @@ struct Gear: Codable, Equatable, Sendable {
     var isEmpty: Bool {
         bike.isEmpty && tires.isEmpty && tireSetup == nil && shoes.isEmpty && groupset == nil && gearing.isEmpty
             && tireWidthMM == nil && rim == nil && frontPSI == nil && rearPSI == nil && riderWeightKg == nil
+            && wheelsets.isEmpty
     }
 
     /// Typed text is capped and cleaned: it goes into the coach's prompt.
@@ -619,6 +700,13 @@ struct Gear: Codable, Equatable, Sendable {
         g.frontPSI = frontPSI.flatMap { (10...160).contains($0) ? $0 : nil }
         g.rearPSI = rearPSI.flatMap { (10...160).contains($0) ? $0 : nil }
         g.shoes = shoes.prefix(8).map { var s = $0; s.model = CustomSession.oneLine(s.model, max: 60); return s }
+        g.wheelsets = wheelsets.prefix(6).map { w in
+            var w = w
+            w.name = CustomSession.oneLine(w.name, max: 60)
+            w.depthMM = w.depthMM.flatMap { (0...120).contains($0) ? $0 : nil }
+            w.internalWidthMM = w.internalWidthMM.flatMap { (10...50).contains($0) ? $0 : nil }
+            return w
+        }
         return g
     }
 
@@ -640,6 +728,12 @@ struct Gear: Codable, Equatable, Sendable {
         }
         if let f = g.frontPSI, let r = g.rearPSI {
             lines.append("Runs \(Int(f)) psi front / \(Int(r)) psi rear.")
+        }
+        if !g.wheelsets.isEmpty {
+            lines.append("Wheels: " + g.wheelsets.map(\.line).joined(separator: "; ") + ".")
+            if g.wheelsets.contains(where: \.isDeep) && g.wheelsets.count > 1 {
+                lines.append("On gusty days (gusts around \(Int(Self.gustyMph)) mph or more), suggest the shallower wheels; deep rims catch crosswinds.")
+            }
         }
         if !g.shoes.isEmpty {
             lines.append("Run shoes: " + g.shoes.map { $0.model.isEmpty ? $0.category.label.lowercased() : "\($0.category.label.lowercased()) (\($0.model))" }

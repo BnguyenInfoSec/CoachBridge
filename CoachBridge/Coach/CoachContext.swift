@@ -140,6 +140,7 @@ enum CoachContext {
             : "Equipment: " + kit.map { $0.label.lowercased() }.joined(separator: ", ")
               + ". Don't program a session that needs something not on this list.")
         if let gear = p.gear { lines += gear.coachLines.map { PromptSafety.inline($0, max: 400) } }
+        if let fuel = p.fuel { lines += fuel.coachLines.map { PromptSafety.inline($0, max: 400) } }
         lines.append("Lifting \(p.liftsPerWeek)× a week.")
         if !p.preferredSports.isEmpty {
             lines.append("Enjoys: " + p.preferredSports.map { $0.label.lowercased() }.joined(separator: ", ") + ".")

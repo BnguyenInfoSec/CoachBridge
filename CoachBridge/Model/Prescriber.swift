@@ -51,7 +51,9 @@ struct Prescriber: Sendable {
         rx.heartRate = heartRate(effort, sport: sport)
         rx.power = sport == .bike ? power(effort) : nil
         if sport == .run { rx.pace = paceText(effort) }
-        let fuel = fueling(minutes: q.minutes, effort: effort, sport: sport, kind: s.kind, day: day)
+        let fuel = Self.personalised(fueling(minutes: q.minutes, effort: effort, sport: sport, kind: s.kind, day: day),
+                                     with: engine.profile.fuel?.sanitized().leg(for: sport),
+                                     minutes: q.minutes ?? 45)
         rx.fuelBefore = fuel.before
         rx.fuelDuring = fuel.during
         rx.fuelAfter = fuel.after
@@ -228,6 +230,30 @@ struct Prescriber: Sendable {
         case "taper": return "60–80 g"
         default: return "60 g"
         }
+    }
+
+    /// The plan's fuelling in the athlete's own terms: their products instead of the defaults,
+    /// what they eat before, and a note when the target is past what their gut is trained to.
+    /// Short sessions stay as they are — nobody needs a gel for a 40-minute swim.
+    static func personalised(_ f: (before: String?, during: String?, after: String?),
+                             with leg: FuelPreferences.Leg?, minutes: Int)
+        -> (before: String?, during: String?, after: String?) {
+        guard let leg, !leg.isEmpty, minutes >= 60 else { return f }
+        var before = f.before
+        var during = f.during
+        if !leg.before.isEmpty { before = "Your usual: \(leg.before)." }
+        if !leg.during.isEmpty, let d = during {
+            let generic = ["Bloks + Skratch every 15–20 min", "Skratch"]
+            if let hit = generic.first(where: { d.contains($0) }) {
+                during = d.replacingOccurrences(of: hit, with: leg.during)
+            } else {
+                during = d + " Your usual: \(leg.during)."
+            }
+        }
+        if minutes >= 90, let trained = leg.carbsPerHour, let d = during {
+            during = d + " You've said your gut handles about \(trained) g/h: build toward the target over several sessions rather than jumping to it."
+        }
+        return (before, during, f.after)
     }
 
     private func fueling(minutes: Int?, effort: Effort, sport: Sport, kind: SessionKind, day: Date)

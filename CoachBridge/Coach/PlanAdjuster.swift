@@ -86,7 +86,7 @@ enum PlanAdjuster {
           "What a good race day looks like to them: \(PromptSafety.inline(p.goal, max: 400))\n")
         Equipment they have — never program a session needing anything else:
         \(p.equipmentList.isEmpty ? "nothing listed" : p.equipmentList.map { $0.label.lowercased() }.joined(separator: ", "))
-        \((p.gear?.coachLines ?? []).map { PromptSafety.inline($0, max: 400) }.joined(separator: "\n"))
+        \(((p.gear?.coachLines ?? []) + (p.fuel?.coachLines ?? [])).map { PromptSafety.inline($0, max: 400) }.joined(separator: "\n"))
 
         Plan rules (follow them exactly):
         \(engine.lifeRules)

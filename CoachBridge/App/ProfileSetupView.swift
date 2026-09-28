@@ -28,8 +28,9 @@ struct ProfileSetupView: View {
             blocksSection
             daysSection
             equipmentSection
-            if draft.hasBike { bikeSection }
+            if draft.hasBike { bikeSection; wheelsSection }
             if draft.sports.contains(.run) { shoesSection }
+            fuelSections
             lifeSection
             preferencesSection
             notesSection
@@ -332,6 +333,103 @@ struct ProfileSetupView: View {
         g.rearPSI = rec.rearPSI
         g.pressuresCustom = false
         draft.gear = g
+    }
+
+    /// Wheelsets: most triathletes have a training pair and a deep race pair, and which goes on
+    /// depends on the wind.
+    private var wheelsSection: some View {
+        Section {
+            ForEach(gear(\.wheelsets)) { $w in
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Wheels, e.g. Zipp 404 Firecrest", text: $w.name)
+                        .textInputAutocapitalization(.words)
+                    Picker("Use", selection: $w.use) {
+                        ForEach(Gear.Wheelset.Use.allCases) { Text($0.label).tag($0) }
+                    }
+                    Picker("Rim depth", selection: $w.depthMM) {
+                        Text("Not set").tag(Int?.none)
+                        ForEach([25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 85, 100, Gear.Wheelset.disc], id: \.self) { d in
+                            Text(d == Gear.Wheelset.disc ? "Disc" : "\(d) mm").tag(Optional(d))
+                        }
+                    }
+                    Picker("Internal width", selection: $w.internalWidthMM) {
+                        Text("Not set").tag(Int?.none)
+                        ForEach(Array(15...32), id: \.self) { Text("\($0) mm").tag(Optional($0)) }
+                    }
+                    Picker("Rims", selection: $w.rim) {
+                        Text("Not sure").tag(TirePressure.Rim?.none)
+                        ForEach(TirePressure.Rim.allCases) { Text($0.label).tag(Optional($0)) }
+                    }
+                }
+            }
+            .onDelete { idx in
+                var g = draft.gear ?? Gear()
+                g.wheelsets.remove(atOffsets: idx)
+                draft.gear = g
+            }
+            Menu {
+                ForEach(Gear.Wheelset.Use.allCases) { u in
+                    Button(u.label) {
+                        var g = draft.gear ?? Gear()
+                        g.wheelsets.append(Gear.Wheelset(use: u))
+                        draft.gear = g
+                    }
+                }
+            } label: {
+                Label("Add a wheelset", systemImage: "circle.circle")
+            }
+        } header: {
+            Text("Wheelsets")
+        } footer: {
+            Text("They go to the coach. With a deep and a shallow pair, each outdoor ride suggests the shallow ones when the forecast has gusts of \(Int(Gear.gustyMph)) mph or more.")
+        }
+    }
+
+    /// What you eat and drink, organised by sport.
+    @ViewBuilder
+    private var fuelSections: some View {
+        let sports = Set(draft.sports)
+        if sports.contains(.swim) { fuelLeg("Swim", \.swim, example: "a gel 15 min before the start", carbs: false) }
+        if sports.contains(.bike) || draft.hasBike { fuelLeg("Bike", \.bike, example: "Maurten 320 + a gel every 40 min", carbs: true) }
+        if sports.contains(.run) { fuelLeg("Run", \.run, example: "a gel every 30 min, water at aid stations", carbs: true) }
+        Section {
+            Picker("Caffeine", selection: fuel(\.caffeine)) {
+                Text("Not set").tag(FuelPreferences.Caffeine?.none)
+                ForEach(FuelPreferences.Caffeine.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            TextField("Avoid, e.g. gluten, fructose-heavy drinks", text: fuel(\.avoid))
+        } header: {
+            Text("Fuel: everything")
+        } footer: {
+            Text("Your products replace the plan's defaults in each session's fuelling, and the coach suggests fuelling with what you actually use. Sessions under an hour keep the plain advice.")
+        }
+    }
+
+    private func fuelLeg(_ name: String, _ leg: WritableKeyPath<FuelPreferences, FuelPreferences.Leg>,
+                         example: String, carbs: Bool) -> some View {
+        Section {
+            TextField("Before, e.g. bagel and honey 2 h out", text: fuel(leg.appending(path: \.before)))
+            TextField("During, e.g. \(example)", text: fuel(leg.appending(path: \.during)))
+            if carbs {
+                Picker("Gut trained to", selection: fuel(leg.appending(path: \.carbsPerHour))) {
+                    Text("Not sure").tag(Int?.none)
+                    ForEach(Array(stride(from: 30, through: 120, by: 10)), id: \.self) { Text("\($0) g carbs/h").tag(Optional($0)) }
+                }
+            }
+        } header: {
+            Text("Fuel: \(name.lowercased())")
+        }
+    }
+
+    /// A field of the fuel preferences, creating the record on first edit.
+    private func fuel<T>(_ field: WritableKeyPath<FuelPreferences, T>) -> Binding<T> {
+        Binding {
+            (draft.fuel ?? FuelPreferences())[keyPath: field]
+        } set: { value in
+            var f = draft.fuel ?? FuelPreferences()
+            f[keyPath: field] = value
+            draft.fuel = f
+        }
     }
 
     private var shoesSection: some View {
