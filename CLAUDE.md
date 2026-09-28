@@ -203,7 +203,9 @@ the prompt builders, and blocks the commit if either fails. Never bypass it with
 - `AthleteProfile.startDate` still falls back to `Date()` for an unfinished or demo profile — the
   one place `Model/` reads the clock. Real profiles are pinned (`pinningStart`, v2.11); before
   that, every real plan restarted daily.
-- The Watch app has only run in paired simulators. Feel answered on the Watch, complications on a
+- The Watch app installs on a real Apple Watch (Ultra 2, 2026-09-28; the watch had to be
+  registered with the team by UDID and Xcode's cached profiles cleared). Beyond installing,
+  it has only run in paired simulators. Feel answered on the Watch, complications on a
   face, and fuel notifications during a Workout session haven't been seen on a real watch.
 - FIT import is tested with generated files only; no real device file has been parsed yet.
 - `docs/coach-bridge-privacy-policy.md` is a draft. It must match the code: if you change what leaves the phone,

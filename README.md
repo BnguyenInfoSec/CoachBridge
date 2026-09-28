@@ -354,9 +354,9 @@ plan calendar, calendar sync, weather, and the Today widget on the Lock Screen.
 
 Not yet verified:
 
-- The Watch app on a real Apple Watch; answering "How did it feel?" on the Watch, complications on a
-  face, and fuel reminders during a Workout app session. The phone-to-Watch snapshot is verified in
-  paired simulators.
+- The Watch app in use on a real Apple Watch (it installs on one): answering "How did it feel?" on
+  the Watch, complications on a face, and fuel reminders during a Workout app session. The
+  phone-to-Watch snapshot is verified in paired simulators.
 - A FIT file from a real device (the parser is tested against generated files)
 - Apple Weather on a signed build: it needs WeatherKit enabled for the App ID in the developer portal
 - The Today widget on a real Home Screen (it's offered in the simulator's widget gallery), and Live
