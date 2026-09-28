@@ -40,6 +40,24 @@ final class SessionEditingTests: XCTestCase {
         XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: [added]).count, 1)
     }
 
+    /// Adding a workout takes the day's optional sessions with it — they were a second, unwanted
+    /// thing to do next to the one just planned. Real planned sessions stay.
+    func testAddingAWorkoutRemovesTheDaysOptionalSessions() {
+        let day = [PlanSession(kind: .flex, title: "Optional easy run"), planned(.swim, "Technique")]
+        let added = CustomSession(date: "2026-10-03", startTime: "18:00", durationMin: 60, kind: .bike, title: "Group ride")
+        XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: [added]).map(\.title), ["Technique"])
+
+        let nap = CustomSession(date: "2026-10-03", startTime: "13:00", durationMin: 30, kind: .rest, title: "Off")
+        XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: [nap]).count, 2, "a rest entry isn't a workout")
+        XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: []).count, 2)
+    }
+
+    func testCommittingAnOptionalSessionLeavesNoOptionalBehind() {
+        let optional = PlanSession(kind: .flex, title: "Optional easy swim")
+        let mine = CustomSession.committing(optional, on: "2026-10-03", startTime: nil)
+        XCTAssertTrue(CustomSession.remaining(planned: [optional], replacedBy: [mine]).isEmpty)
+    }
+
     /// If Claude later renames the planned session, the athlete's edit still replaces it —
     /// matching is by kind, not title, so the day doesn't end up with both.
     func testReplacementSurvivesClaudeRenamingTheSession() {

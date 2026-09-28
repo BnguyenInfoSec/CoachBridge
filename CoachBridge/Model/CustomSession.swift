@@ -124,10 +124,16 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
 
     /// The day's planned sessions minus the ones the athlete took over: for each of their
     /// sessions that replaces a kind, the first remaining planned session of that kind.
+    ///
+    /// A workout the athlete adds also takes the day's optional sessions with it: "Optional easy
+    /// run" next to the ride they just planned was a second, unwanted thing to do.
     static func remaining(planned: [PlanSession], replacedBy mine: [CustomSession]) -> [PlanSession] {
         var out = planned
         for kind in mine.compactMap(\.replaces) {
             if let i = out.firstIndex(where: { $0.kind == kind && !$0.addedByAthlete }) { out.remove(at: i) }
+        }
+        if mine.contains(where: { $0.kind != .rest && $0.kind != .flex }) {
+            out.removeAll { $0.kind == .flex && !$0.addedByAthlete }
         }
         return out
     }
