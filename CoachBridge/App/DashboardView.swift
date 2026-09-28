@@ -139,7 +139,7 @@ private struct SeasonCard: View {
             Text(ph.focus).font(.subheadline).foregroundStyle(.secondary)
             if named, let race = RaceDayPlan.make(event: engine.profile.eventKind, raceName: engine.raceName,
                                                   ftp: engine.settings.ftpWatts, lthr: engine.settings.lthrBpm,
-                                                  projection: projection) {
+                                                  projection: projection, gear: engine.profile.gear) {
                 NavigationLink {
                     RaceDayView(plan: race, projection: projection)
                 } label: {

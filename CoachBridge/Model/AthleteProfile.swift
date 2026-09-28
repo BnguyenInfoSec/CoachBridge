@@ -465,16 +465,83 @@ struct Gear: Codable, Equatable, Sendable {
         var model: String = ""
     }
 
+    enum Groupset: String, Codable, CaseIterable, Identifiable, Sendable {
+        case duraAceDi2, ultegraDi2, shimano105Di2, shimano105, grxDi2, grx
+        case redAXS, forceAXS, forceXPLRAXS, rivalAXS, rivalXPLRAXS, apexAXS, apexXPLRAXS
+        case superRecordWireless, chorus
+        case other
+
+        var id: String { rawValue }
+        var brand: String {
+            switch self {
+            case .duraAceDi2, .ultegraDi2, .shimano105Di2, .shimano105, .grxDi2, .grx: return "Shimano"
+            case .redAXS, .forceAXS, .forceXPLRAXS, .rivalAXS, .rivalXPLRAXS, .apexAXS, .apexXPLRAXS: return "SRAM"
+            case .superRecordWireless, .chorus: return "Campagnolo"
+            case .other: return "Other"
+            }
+        }
+        var label: String {
+            switch self {
+            case .duraAceDi2: return "Dura-Ace Di2"
+            case .ultegraDi2: return "Ultegra Di2"
+            case .shimano105Di2: return "105 Di2"
+            case .shimano105: return "105 (mechanical)"
+            case .grxDi2: return "GRX Di2"
+            case .grx: return "GRX (mechanical)"
+            case .redAXS: return "Red AXS"
+            case .forceAXS: return "Force AXS"
+            case .forceXPLRAXS: return "Force XPLR AXS"
+            case .rivalAXS: return "Rival AXS"
+            case .rivalXPLRAXS: return "Rival XPLR AXS"
+            case .apexAXS: return "Apex AXS"
+            case .apexXPLRAXS: return "Apex XPLR AXS"
+            case .superRecordWireless: return "Super Record Wireless"
+            case .chorus: return "Chorus (mechanical)"
+            case .other: return "Something else"
+            }
+        }
+        var isElectronic: Bool { ![.shimano105, .grx, .chorus, .other].contains(self) }
+        var batteryNote: String? {
+            switch brand {
+            case "Shimano" where isElectronic: return "Charge the Di2 battery the day before."
+            case "SRAM": return "Charge the AXS derailleur batteries the day before, and pack a spare — they swap between front and rear."
+            case "Campagnolo" where isElectronic: return "Charge the groupset the day before."
+            default: return nil
+            }
+        }
+        /// XPLR is SRAM's 1× gravel line; the rest are usually run 2×.
+        var isOneBy: Bool { self == .forceXPLRAXS || self == .rivalXPLRAXS || self == .apexXPLRAXS }
+    }
+
     var bike: String = ""
     var tires: String = ""
     var tireSetup: TireSetup? = nil
     var shoes: [Shoe] = []
+    var groupset: Groupset? = nil
+    /// Free text, e.g. "50/34, 11–34" or "42T, 10–44".
+    var gearing: String = ""
+    // Tire pressure inputs and the athlete's chosen pressures.
+    var pressureBike: TirePressure.Bike? = nil
+    var tireWidthMM: Int? = nil
+    var rim: TirePressure.Rim? = nil
+    var riding: TirePressure.Riding? = nil
+    /// Only when typed in; otherwise the latest weight from Apple Health is used. Stays on the
+    /// phone — it isn't part of what the coach is sent.
+    var riderWeightKg: Double? = nil
+    var frontPSI: Double? = nil
+    var rearPSI: Double? = nil
+    /// True once the athlete edits a pressure by hand; until then pressures follow the
+    /// recommendation as the inputs change.
+    var pressuresCustom: Bool = false
 
-    init(bike: String = "", tires: String = "", tireSetup: TireSetup? = nil, shoes: [Shoe] = []) {
+    init(bike: String = "", tires: String = "", tireSetup: TireSetup? = nil, shoes: [Shoe] = [],
+         groupset: Groupset? = nil, gearing: String = "") {
         self.bike = bike
         self.tires = tires
         self.tireSetup = tireSetup
         self.shoes = shoes
+        self.groupset = groupset
+        self.gearing = gearing
     }
 
     /// Lenient: any field missing (an older save, a field added later) decodes to its default
@@ -485,15 +552,60 @@ struct Gear: Codable, Equatable, Sendable {
         tires = (try? c.decodeIfPresent(String.self, forKey: .tires)) ?? ""
         tireSetup = try? c.decodeIfPresent(TireSetup.self, forKey: .tireSetup)
         shoes = (try? c.decodeIfPresent([Shoe].self, forKey: .shoes)) ?? []
+        groupset = try? c.decodeIfPresent(Groupset.self, forKey: .groupset)
+        gearing = (try? c.decodeIfPresent(String.self, forKey: .gearing)) ?? ""
+        pressureBike = try? c.decodeIfPresent(TirePressure.Bike.self, forKey: .pressureBike)
+        tireWidthMM = try? c.decodeIfPresent(Int.self, forKey: .tireWidthMM)
+        rim = try? c.decodeIfPresent(TirePressure.Rim.self, forKey: .rim)
+        riding = try? c.decodeIfPresent(TirePressure.Riding.self, forKey: .riding)
+        riderWeightKg = try? c.decodeIfPresent(Double.self, forKey: .riderWeightKg)
+        frontPSI = try? c.decodeIfPresent(Double.self, forKey: .frontPSI)
+        rearPSI = try? c.decodeIfPresent(Double.self, forKey: .rearPSI)
+        pressuresCustom = (try? c.decodeIfPresent(Bool.self, forKey: .pressuresCustom)) ?? false
     }
 
-    var isEmpty: Bool { bike.isEmpty && tires.isEmpty && tireSetup == nil && shoes.isEmpty }
+    /// Pressure for one ride: your saved pressures, or the recommendation, adjusted for rain.
+    /// Nil for indoor rides (a direct-drive trainer has no rear tire, and it's never wet) and
+    /// when there's nothing to go on. `note` explains any adjustment.
+    func pressure(forRide s: PlanSession, wet: Bool, riderKg: Double?) -> (front: Double, rear: Double, note: String?)? {
+        guard s.kind == .bike || Prescriber.sport(of: s) == .bike, s.indoor != true else { return nil }
+        if pressuresCustom, let f = frontPSI, let r = rearPSI {
+            // Your own numbers, eased for rain the same way the recommendation would be.
+            return wet ? ((f * 0.93).rounded(), (r * 0.93).rounded(), "Rain forecast: about 7% under your usual for grip.")
+                       : (f, r, nil)
+        }
+        var g = self
+        if wet { g.riding = .wet }
+        guard let rec = g.recommendedPressure(riderKg: riderKg) else {
+            if let f = frontPSI, let r = rearPSI { return (f, r, nil) }
+            return nil
+        }
+        return (rec.frontPSI, rec.rearPSI, wet ? "Rain forecast: set for wet roads." : nil)
+    }
+
+    /// The recommendation for the current inputs, given a rider weight.
+    func recommendedPressure(riderKg: Double?) -> TirePressure.Result? {
+        guard let kg = riderWeightKg ?? riderKg else { return nil }
+        let bike = pressureBike ?? .road
+        return TirePressure.recommend(riderKg: kg, bike: bike, widthMM: tireWidthMM ?? bike.defaultWidth,
+                                      setup: tireSetup, rim: rim, riding: riding ?? (bike == .mountain ? .trail : bike == .gravel ? .gravel : .roadTraining))
+    }
+
+    var isEmpty: Bool {
+        bike.isEmpty && tires.isEmpty && tireSetup == nil && shoes.isEmpty && groupset == nil && gearing.isEmpty
+            && tireWidthMM == nil && rim == nil && frontPSI == nil && rearPSI == nil && riderWeightKg == nil
+    }
 
     /// Typed text is capped and cleaned: it goes into the coach's prompt.
     func sanitized() -> Gear {
         var g = self
         g.bike = CustomSession.oneLine(bike, max: 80)
         g.tires = CustomSession.oneLine(tires, max: 80)
+        g.gearing = CustomSession.oneLine(gearing, max: 40)
+        g.tireWidthMM = tireWidthMM.map { min(max($0, 18), 80) }
+        g.riderWeightKg = riderWeightKg.flatMap { (30...200).contains($0) ? $0 : nil }
+        g.frontPSI = frontPSI.flatMap { (10...160).contains($0) ? $0 : nil }
+        g.rearPSI = rearPSI.flatMap { (10...160).contains($0) ? $0 : nil }
         g.shoes = shoes.prefix(8).map { var s = $0; s.model = CustomSession.oneLine(s.model, max: 60); return s }
         return g
     }
@@ -503,9 +615,19 @@ struct Gear: Codable, Equatable, Sendable {
         let g = sanitized()
         var lines: [String] = []
         if !g.bike.isEmpty { lines.append("Bike: \(g.bike).") }
-        if !g.tires.isEmpty || g.tireSetup != nil {
-            lines.append("Tires: " + [g.tires.isEmpty ? nil : g.tires, g.tireSetup.map { $0.label.lowercased() }]
+        if let gs = g.groupset {
+            lines.append("Groupset: \(gs.brand == "Other" ? "other" : "\(gs.brand) \(gs.label)") (\(gs.isOneBy ? "1×" : "2×"), \(gs.isElectronic ? "electronic" : "mechanical"))"
+                         + (g.gearing.isEmpty ? "." : "; gearing \(g.gearing)."))
+        } else if !g.gearing.isEmpty {
+            lines.append("Gearing: \(g.gearing).")
+        }
+        if !g.tires.isEmpty || g.tireSetup != nil || g.tireWidthMM != nil {
+            lines.append("Tires: " + [g.tires.isEmpty ? nil : g.tires, g.tireWidthMM.map { "\($0) mm" },
+                                      g.tireSetup.map { $0.label.lowercased() }, g.rim.map { "\($0.label.lowercased()) rims" }]
                 .compactMap { $0 }.joined(separator: ", ") + ".")
+        }
+        if let f = g.frontPSI, let r = g.rearPSI {
+            lines.append("Runs \(Int(f)) psi front / \(Int(r)) psi rear.")
         }
         if !g.shoes.isEmpty {
             lines.append("Run shoes: " + g.shoes.map { $0.model.isEmpty ? $0.category.label.lowercased() : "\($0.category.label.lowercased()) (\($0.model))" }

@@ -96,7 +96,7 @@ final class WatchLink: NSObject, ObservableObject {
         let raceDays = e.daysToRace(from: today)
         let race: WatchSnapshot.Race? = (!plan.needsSetup && e.blueprint.hasEvent && raceDays <= 1)
             ? RaceDayPlan.make(event: e.profile.eventKind, raceName: e.raceName,
-                               ftp: e.settings.ftpWatts, lthr: e.settings.lthrBpm).map { r in
+                               ftp: e.settings.ftpWatts, lthr: e.settings.lthrBpm, gear: e.profile.gear).map { r in
                 WatchSnapshot.Race(name: r.raceName,
                                    legs: r.legs.map { .init(label: $0.label, target: $0.target, cue: $0.cue) },
                                    fuel: r.fuel.map { FuelCue(at: $0.at, text: "\($0.leg): \($0.text)") })

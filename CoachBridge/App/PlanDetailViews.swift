@@ -83,6 +83,19 @@ struct SessionDetailView: View {
                 }
             }
 
+            if let tire = rideTirePressure(shown, engine: engine) {
+                Section {
+                    row("Tire pressure", "\(Int(tire.front)) psi front / \(Int(tire.rear)) psi rear  (\(String(format: "%.1f / %.1f bar", tire.front / TirePressure.psiPerBar, tire.rear / TirePressure.psiPerBar)))", "gauge.with.needle")
+                    if let note = tire.note {
+                        Label(note, systemImage: "cloud.rain").font(.caption).foregroundStyle(Palette.warning)
+                    }
+                } footer: {
+                    Text(plan.profile.gear?.pressuresCustom == true
+                         ? "Your pressures from Your training → Your bike."
+                         : "Recommended from your weight, tires and rims — set your own in Your training → Your bike.")
+                }
+            }
+
             Section {
                 row("Before", rx.fuelBefore, "sunrise")
                 row("During", rx.fuelDuring, "drop.fill")
@@ -183,6 +196,16 @@ struct SessionDetailView: View {
     private func displayed(engine: PlanEngine) -> PlanSession {
         guard let d = draft else { return session }
         return plan.merged(d.planSession(), on: engine.date(d.date), rx: Prescriber(engine: engine))
+    }
+
+    /// Pressure for this ride, eased if rain is likely (50%+) at the start.
+    private func rideTirePressure(_ s: PlanSession, engine: PlanEngine) -> (front: Double, rear: Double, note: String?)? {
+        guard let gear = plan.profile.gear else { return nil }
+        let start = slot?.start ?? draft.flatMap { Scheduler.time($0.startTime, on: engine.date($0.date), calendar: engine.calendar) }
+            ?? date
+        let wet = (weather.forecast?.at(start)?.precipProb ?? 0) >= 50
+        let healthKg = dashboard.data?.today.metrics[.weight].map { $0 * 0.453_592 }
+        return gear.pressure(forRide: s, wet: wet, riderKg: healthKg)
     }
 
     private func rework() async {

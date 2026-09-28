@@ -4,6 +4,7 @@ import SwiftUI
 /// same screen serves as the editor afterwards. Everything the plan used to hardcode lives here.
 struct ProfileSetupView: View {
     @EnvironmentObject private var plan: PlanModel
+    @EnvironmentObject private var dashboard: DashboardModel
     @Environment(\.dismiss) private var dismiss
 
     /// First run shows a Done button that saves and closes; Settings shows a plain editor.
@@ -27,6 +28,8 @@ struct ProfileSetupView: View {
             blocksSection
             daysSection
             equipmentSection
+            if draft.hasBike { bikeSection }
+            if draft.sports.contains(.run) { shoesSection }
             lifeSection
             preferencesSection
             notesSection
@@ -216,16 +219,120 @@ struct ProfileSetupView: View {
                     }
                 }
             }
-            if draft.hasBike {
-                TextField("Your bike, e.g. Canyon Speedmax CF 8", text: gear(\.bike))
-                    .textInputAutocapitalization(.words)
-                TextField("Tires, e.g. GP5000 S TR, 28 mm", text: gear(\.tires))
-                Picker("Tire setup", selection: gear(\.tireSetup)) {
-                    Text("Not sure").tag(Gear.TireSetup?.none)
-                    ForEach(Gear.TireSetup.allCases) { Text($0.label).tag(Optional($0)) }
+        } header: {
+            Text("What you've got")
+        } footer: {
+            Text(equipmentFooter)
+        }
+    }
+
+    /// The bike: what it is, the groupset, and tire pressure worked out from your weight, tire,
+    /// rim and riding — filled in automatically until you type your own.
+    private var bikeSection: some View {
+        let healthKg = dashboard.data?.today.metrics[.weight].map { $0 * 0.453_592 }
+        let rec = (draft.gear ?? Gear()).recommendedPressure(riderKg: healthKg)
+        return Section {
+            TextField("Your bike, e.g. Canyon Speedmax CF 8", text: gear(\.bike))
+                .textInputAutocapitalization(.words)
+            Picker("Groupset", selection: gear(\.groupset)) {
+                Text("Not set").tag(Gear.Groupset?.none)
+                ForEach(["Shimano", "SRAM", "Campagnolo", "Other"], id: \.self) { brand in
+                    ForEach(Gear.Groupset.allCases.filter { $0.brand == brand }) { g in
+                        Text(brand == "Other" ? g.label : "\(brand) \(g.label)").tag(Optional(g))
+                    }
                 }
             }
-            if draft.sports.contains(.run) {
+            TextField("Gearing, e.g. 50/34, 11–34 or 42T, 10–44", text: gear(\.gearing))
+
+            TextField("Tires, e.g. GP5000 S TR", text: gear(\.tires))
+            Picker("Tire width", selection: gear(\.tireWidthMM)) {
+                Text("Not set").tag(Int?.none)
+                ForEach([23, 25, 28, 30, 32, 35, 38, 40, 42, 45, 50, 56, 61], id: \.self) { w in
+                    Text(w >= 50 ? String(format: "%d mm (%.1f\")", w, Double(w) / 25.4) : "\(w) mm").tag(Optional(w))
+                }
+            }
+            Picker("Tire setup", selection: gear(\.tireSetup)) {
+                Text("Not sure").tag(Gear.TireSetup?.none)
+                ForEach(Gear.TireSetup.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            Picker("Rims", selection: gear(\.rim)) {
+                Text("Not sure").tag(TirePressure.Rim?.none)
+                ForEach(TirePressure.Rim.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            Picker("Bike type", selection: gear(\.pressureBike)) {
+                Text("Not set").tag(TirePressure.Bike?.none)
+                ForEach(TirePressure.Bike.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            Picker("Riding", selection: gear(\.riding)) {
+                Text("Default for the bike").tag(TirePressure.Riding?.none)
+                ForEach(TirePressure.Riding.allCases) { Text($0.label).tag(Optional($0)) }
+            }
+            LabeledContent("Your weight") {
+                TextField(healthKg.map { "\(Int(($0 / 0.453_592).rounded())) lb from Health" } ?? "lb",
+                          value: Binding(get: { draft.gear?.riderWeightKg.map { ($0 / 0.453_592).rounded() } },
+                                         set: { lb in var g = draft.gear ?? Gear(); g.riderWeightKg = lb.map { $0 * 0.453_592 }; draft.gear = g }),
+                          format: .number)
+                    .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+            }
+            pressureRow("Front", \.frontPSI)
+            pressureRow("Rear", \.rearPSI)
+            if let rec {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Recommended \(Int(rec.frontPSI)) / \(Int(rec.rearPSI)) psi (\(String(format: "%.1f", rec.frontBar)) / \(String(format: "%.1f", rec.rearBar)) bar)")
+                            .font(.subheadline.monospacedDigit())
+                        Spacer()
+                        if draft.gear?.pressuresCustom == true {
+                            Button("Use") { applyRecommendation(rec, force: true) }
+                        }
+                    }
+                    ForEach(rec.notes, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
+                }
+            } else {
+                Text("Add your weight (or allow Health) and a tire width for a recommended pressure.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Your bike")
+        } footer: {
+            Text("Pressure is worked out from your weight, bike, tire width, tubes or tubeless, rims and what you're riding, and fills in until you set your own. Your weight stays on this iPhone; the bike, groupset, tires and pressures go to the coach.")
+        }
+        .onChange(of: rec) { _, new in if let new { applyRecommendation(new, force: false) } }
+        .onAppear { if let rec { applyRecommendation(rec, force: false) } }
+    }
+
+    private func pressureRow(_ label: String, _ field: WritableKeyPath<Gear, Double?>) -> some View {
+        LabeledContent(label) {
+            HStack(spacing: 6) {
+                TextField("psi", value: Binding(
+                    get: { draft.gear?[keyPath: field] },
+                    set: { v in
+                        var g = draft.gear ?? Gear()
+                        g[keyPath: field] = v
+                        g.pressuresCustom = true              // the athlete's own number now wins
+                        draft.gear = g
+                    }), format: .number)
+                    .keyboardType(.decimalPad).multilineTextAlignment(.trailing).frame(maxWidth: 70)
+                Text("psi").foregroundStyle(.secondary)
+                if let v = draft.gear?[keyPath: field] {
+                    Text(String(format: "%.1f bar", v / TirePressure.psiPerBar)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func applyRecommendation(_ rec: TirePressure.Result, force: Bool) {
+        var g = draft.gear ?? Gear()
+        guard force || !g.pressuresCustom else { return }
+        guard g.frontPSI != rec.frontPSI || g.rearPSI != rec.rearPSI || g.pressuresCustom else { return }
+        g.frontPSI = rec.frontPSI
+        g.rearPSI = rec.rearPSI
+        g.pressuresCustom = false
+        draft.gear = g
+    }
+
+    private var shoesSection: some View {
+        Section {
                 ForEach(shoes) { $shoe in
                     VStack(alignment: .leading, spacing: 4) {
                         Picker("Shoe type", selection: $shoe.category) {
@@ -251,11 +358,10 @@ struct ProfileSetupView: View {
                 } label: {
                     Label("Add running shoes", systemImage: "shoe.fill")
                 }
-            }
         } header: {
-            Text("What you've got")
+            Text("Running shoes")
         } footer: {
-            Text(equipmentFooter)
+            Text("The coach uses these to say which pair suits each run.")
         }
     }
 
@@ -273,6 +379,10 @@ struct ProfileSetupView: View {
     private var shoes: Binding<[Gear.Shoe]> { gear(\.shoes) }
 
     private var equipmentFooter: String {
+        equipmentFooterText
+    }
+
+    private var equipmentFooterText: String {
         if draft.eventKind.isTriathlon && !draft.hasBike {
             return "No bike ticked, so the plan can't program riding — worth fixing before a triathlon."
         }

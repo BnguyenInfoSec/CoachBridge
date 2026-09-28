@@ -41,7 +41,7 @@ struct RaceDayPlan: Equatable, Sendable {
     /// With a projection, leg times — and so the fuelling timeline — come from your own training
     /// instead of typical times.
     static func make(event: EventKind, raceName: String, ftp: Int?, lthr: Int?,
-                     projection: RaceProjection? = nil) -> RaceDayPlan? {
+                     projection: RaceProjection? = nil, gear: Gear? = nil) -> RaceDayPlan? {
         func watts(_ lo: Double, _ hi: Double) -> String {
             ftp.map { "\(Int((Double($0) * lo).rounded()))–\(Int((Double($0) * hi).rounded())) W (\(Int(lo * 100))–\(Int(hi * 100))% of FTP)" }
                 ?? "\(Int(lo * 100))–\(Int(hi * 100))% of FTP — add your FTP in Plan settings for watts"
@@ -132,6 +132,12 @@ struct RaceDayPlan: Equatable, Sendable {
         }
 
         var notes = ["Nothing new on race day — only foods and drinks you've trained with."]
+        if legs.contains(where: { $0.sport == .bike }) {
+            if let battery = gear?.groupset?.batteryNote { notes.append(battery) }
+            if let f = gear?.frontPSI, let r = gear?.rearPSI {
+                notes.append("Tires: \(Int(f)) psi front / \(Int(r)) rear — set them race morning, after the bike's been in the sun or the cold overnight.")
+            }
+        }
         if legs.contains(where: { $0.sport == .bike && $0.minutes >= 120 }) {
             notes.append("Fluid 500–750 ml per hour on the bike, more in heat; add ~250 ml per hour above ~90°F.")
         }
