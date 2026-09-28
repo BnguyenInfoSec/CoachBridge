@@ -22,7 +22,9 @@ struct DashboardView: View {
                     if plan.needsSetup {
                         SetupPromptCard()
                     } else {
-                        SeasonCard(engine: engine, today: today)
+                        SeasonCard(engine: engine, today: today, training: dashboard.data?.recentTraining)
+                        RacesCard(profile: engine.profile, today: today, isoToday: engine.iso(today),
+                                  training: dashboard.data?.recentTraining)
                         ThisWeekCard(days: week, today: today)
                         UpNextCard(days: upcoming, today: today)
                     }
@@ -113,6 +115,8 @@ private struct SetupPromptCard: View {
 private struct SeasonCard: View {
     let engine: PlanEngine
     let today: Date
+    /// Nil until the dashboard has loaded; then projections come from it.
+    let training: [WorkoutSummary]?
 
     var body: some View {
         let ph = engine.phase(for: today)
@@ -128,16 +132,80 @@ private struct SeasonCard: View {
             }
             .accessibilityElement(children: .combine)
             if let pw = engine.phaseWeek(today) { PhaseChip(week: pw) }
+            let projection = training.flatMap { RaceProjection.make(event: engine.profile.eventKind, recent: $0) }
+            if let projection {
+                ProjectionRow(projection: projection)
+            }
             PhaseRibbon(engine: engine, date: today)
             Text(ph.focus).font(.subheadline).foregroundStyle(.secondary)
             if named, let race = RaceDayPlan.make(event: engine.profile.eventKind, raceName: engine.raceName,
-                                                  ftp: engine.settings.ftpWatts, lthr: engine.settings.lthrBpm) {
+                                                  ftp: engine.settings.ftpWatts, lthr: engine.settings.lthrBpm,
+                                                  projection: projection) {
                 NavigationLink {
-                    RaceDayView(plan: race)
+                    RaceDayView(plan: race, projection: projection)
                 } label: {
                     Label("Race-day plan", systemImage: "flag.checkered")
                         .font(.subheadline.weight(.semibold))
                 }
+            }
+        }
+    }
+}
+
+/// "Projected finish 5:42 (5:25–6:00)", with how much of it came from your data.
+private struct ProjectionRow: View {
+    let projection: RaceProjection
+
+    var body: some View {
+        let r = projection.range
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("Projected finish").font(.subheadline).foregroundStyle(.secondary)
+                Text(RaceProjection.clock(projection.total)).font(.headline.monospacedDigit())
+                Text("(\(RaceProjection.clock(r.lowerBound))–\(RaceProjection.clock(r.upperBound)))")
+                    .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            if projection.legsFromData < projection.legs.count {
+                Text(projection.legsFromData == 0
+                     ? "Typical times — record a few more workouts to base this on your own."
+                     : "Partly typical times: \(projection.legs.count - projection.legsFromData) leg\(projection.legs.count - projection.legsFromData == 1 ? "" : "s") need more recent workouts.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The other races on the calendar, each with a projected time where the distance is known.
+private struct RacesCard: View {
+    let profile: AthleteProfile
+    let today: Date
+    let isoToday: String
+    let training: [WorkoutSummary]?
+
+    var body: some View {
+        let races = profile.events.filter { $0.isRace && $0.dateISO >= isoToday }.sorted { $0.dateISO < $1.dateISO }
+        if !races.isEmpty {
+            Card("Your races", icon: "flag.2.crossed", tint: Palette.series7) {
+                ForEach(races) { race in
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(race.title).font(.subheadline.weight(.semibold))
+                            Text([AthleteProfile.date(race.dateISO).formatted(.dateTime.month(.abbreviated).day().year()),
+                                  race.kind?.label].compactMap { $0 }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if let kind = race.kind, let training, let p = RaceProjection.make(event: kind, recent: training) {
+                            Text("~" + RaceProjection.clock(p.total)).font(.subheadline.monospacedDigit().weight(.semibold))
+                        } else if race.kind == nil {
+                            Text("Add a distance").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                Text("Projected from your last eight weeks of training. Set a race's distance in Your training to see its time.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }

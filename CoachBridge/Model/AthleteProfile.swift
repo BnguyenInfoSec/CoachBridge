@@ -220,6 +220,9 @@ struct AthleteEvent: Codable, Identifiable, Hashable, Sendable {
     var detail: String = ""
     /// A real race they're targeting, vs. something they're just turning up to.
     var isRace = true
+    /// The distance, so the dashboard can project a finish time. Optional: events saved before
+    /// v2.10 have none (and the profile must still decode).
+    var kind: EventKind? = nil
 }
 
 /// Working or school hours, which decide where sessions can be placed.

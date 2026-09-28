@@ -24,15 +24,17 @@ final class DashboardModel: ObservableObject {
     init(source: any HealthSource) { self.source = source }
 
     /// Six weeks of fitness, fatigue and form, from 90 days of workouts so the averages settle.
-    private func load(now: Date, demo: Bool) async -> TrainingLoad.Summary? {
+    private func load(now: Date, demo: Bool) async -> (TrainingLoad.Summary?, [WorkoutSummary]) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         let from = cal.date(byAdding: .day, value: -(TrainingLoad.warmupDays + 42), to: today)!
         let to = cal.date(byAdding: .day, value: 1, to: today)!
         let list = demo ? DemoData.workouts(from: from, to: to, calendar: cal)
                         : ((try? await source.workouts(from: from, to: to)) ?? [])
-        return TrainingLoad.summary(list, lthr: lthr(), from: cal.date(byAdding: .day, value: -41, to: today)!,
-                                    to: today, calendar: cal)
+        let eightWeeks = cal.date(byAdding: .day, value: -56, to: today)!
+        return (TrainingLoad.summary(list, lthr: lthr(), from: cal.date(byAdding: .day, value: -41, to: today)!,
+                                     to: today, calendar: cal),
+                list.filter { $0.start >= eightWeeks })
     }
 
     /// `force` runs even when a load is already in flight — used when demo mode flips, where
@@ -46,7 +48,7 @@ final class DashboardModel: ObservableObject {
 
         if DemoData.isOn {
             var demo = DemoData.dashboard()
-            demo.load = await load(now: .now, demo: true)
+            (demo.load, demo.recentTraining) = await load(now: .now, demo: true)
             guard token == generation else { return }
             data = demo
             loadedInDemoMode = true
@@ -55,7 +57,7 @@ final class DashboardModel: ObservableObject {
         }
         do {
             var loaded = try await source.dashboard(now: .now)
-            loaded.load = await load(now: .now, demo: false)
+            (loaded.load, loaded.recentTraining) = await load(now: .now, demo: false)
             guard token == generation else { return }     // demo mode flipped while we were reading
             data = loaded
             loadedInDemoMode = false

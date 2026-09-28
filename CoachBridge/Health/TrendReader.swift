@@ -17,6 +17,9 @@ struct DashboardData: Sendable {
     var hrvMethod: HRVMethod = .sdnn
     /// Fitness, fatigue and form over recent weeks; filled in by DashboardModel.
     var load: TrainingLoad.Summary? = nil
+    /// The last eight weeks of workouts, for projecting race times. Filled in by DashboardModel
+    /// from the same fetch as `load`.
+    var recentTraining: [WorkoutSummary] = []
 }
 
 /// Reads the trend data behind the phone dashboard. Everything stays in memory.

@@ -508,6 +508,7 @@ private struct EventEditor: View {
     @State private var date = Date.now
     @State private var detail = ""
     @State private var isRace = true
+    @State private var kind: EventKind?
 
     var body: some View {
         NavigationStack {
@@ -515,6 +516,12 @@ private struct EventEditor: View {
                 TextField("Name", text: $title)
                 DatePicker("Date", selection: $date, displayedComponents: .date)
                 Toggle("It's a race", isOn: $isRace)
+                if isRace {
+                    Picker("Distance", selection: $kind) {
+                        Text("Not set").tag(EventKind?.none)
+                        ForEach(EventKind.allCases.filter { $0 != .general }) { Text($0.label).tag(Optional($0)) }
+                    }
+                }
                 TextField("Notes", text: $detail, axis: .vertical).lineLimit(2...5)
             }
             .navigationTitle("Race or event")
@@ -525,7 +532,7 @@ private struct EventEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
                         onSave(AthleteEvent(dateISO: AthleteProfile.iso(date), title: title,
-                                            detail: detail, isRace: isRace))
+                                            detail: detail, isRace: isRace, kind: isRace ? kind : nil))
                         dismiss()
                     }
                     .disabled(title.isEmpty)

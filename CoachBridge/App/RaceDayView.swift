@@ -4,9 +4,36 @@ import SwiftUI
 /// the day before and on race morning.
 struct RaceDayView: View {
     let plan: RaceDayPlan
+    var projection: RaceProjection? = nil
 
     var body: some View {
         List {
+            if let projection {
+                Section {
+                    ForEach(projection.legs) { leg in
+                        HStack(alignment: .firstTextBaseline) {
+                            Label(leg.label, systemImage: leg.sport.symbol).foregroundStyle(Palette.color(for: leg.sport))
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(RaceProjection.clock(leg.seconds)).font(.subheadline.monospacedDigit().weight(.semibold))
+                                Text(leg.basis.text).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                            }
+                        }
+                    }
+                    if projection.transitions > 0 {
+                        LabeledContent("Transitions", value: RaceProjection.clock(projection.transitions))
+                    }
+                    LabeledContent("Finish") {
+                        Text("\(RaceProjection.clock(projection.total))  (\(RaceProjection.clock(projection.range.lowerBound))–\(RaceProjection.clock(projection.range.upperBound)))")
+                            .monospacedDigit().bold()
+                    }
+                } header: {
+                    Text("Projected times")
+                } footer: {
+                    Text("From your last eight weeks of workouts: median swim pace, your quicker rides, and your best run carried to race distance (Riegel's formula), slowed for running off the bike. It moves as you train.")
+                }
+            }
+
             Section {
                 ForEach(plan.legs) { leg in
                     VStack(alignment: .leading, spacing: 4) {
