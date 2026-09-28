@@ -58,6 +58,11 @@ documented in [`docs/data-contract.md`](docs/data-contract.md).
 next session and race countdown. Start a session straight into the Workout app, rate how a workout
 felt with the Digital Crown, and get fuel reminders on long sessions and race day.
 
+**Asks how it went, the way Strava does.** Open the app after a workout and it asks how it felt;
+turn on workout reminders and a notification asks as soon as Health has the workout, with one
+reminder later. Your answer is what the coach's note is written from, and the note shows right on
+the workout in the plan. Run/walk intervals recorded as separate pieces count as one workout.
+
 **Bring your own devices.** Import FIT files from Garmin, Wahoo, Hammerhead or any bike computer.
 A session that's also in Apple Health counts once. Only totals are kept, never the route.
 
@@ -265,7 +270,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 313 tests and runs in about four seconds. It covers the data contract, the plan engine
+The suite has 327 tests and runs in about four seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
@@ -299,11 +304,11 @@ git config core.hooksPath tools/githooks
 
 ## Project status
 
-Personal project in active development, currently **v2.11.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.12.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the
-plan calendar, calendar sync and weather.
+plan calendar, calendar sync, weather, and the Today widget on the Lock Screen.
 
 Not yet verified:
 
@@ -312,8 +317,10 @@ Not yet verified:
   paired simulators.
 - A FIT file from a real device (the parser is tested against generated files)
 - Apple Weather on a signed build: it needs WeatherKit enabled for the App ID in the developer portal
-- The Today widget placed on a home or Lock Screen, and Live Activities on a real Dynamic Island
-  (the Live Activity is verified on the simulator's Lock Screen)
+- The Today widget on a real Home Screen (it's offered in the simulator's widget gallery), and Live
+  Activities on a real Dynamic Island (verified on the simulator's Lock Screen)
+- Workout reminder notifications on a real iPhone, which depend on HealthKit delivering new
+  workouts in the background; the sheet that asks on opening the app is verified in the simulator
 - Apple Calendar phase banners and WorkoutKit sync since the v2.0 plan rewrite
 - The OpenAI provider; the hosted-server client is a stub
 - Coaching quality: the plan engine is tested for structure, not for whether its weeks are good

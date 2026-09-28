@@ -875,3 +875,40 @@ It's in the app at Settings → Privacy policy, and in the repository as
 The Watch app, complications and widget now carry the app's version (a mismatch blocks App Store
 uploads). The workout journal's clean-up had never run, so it grew forever; it now keeps a year,
 and FIT imports keep two.
+
+# v2.12 — asks how it went, and a note you can see
+
+## How did it feel?
+Opening the app after a workout now asks how it felt straight away, for the newest one you
+haven't answered. Asked once: skip it and it won't come back, though the workout still has its
+prompt. **Workout reminders** (Settings) add a notification as soon as Apple Health has the
+workout and one reminder three hours later, both cleared when you answer. They say only the sport,
+never a time, distance or heart rate, because they show on a locked phone, and they come after
+your first unlock, since Health can't be read while the phone is locked.
+
+## The coach's note, in the plan
+A workout's card on the plan now shows the coach's note: open for the last two days, a tap to
+expand after that. The week list shows its one-line takeaway.
+
+The note is still written once, when you answer (one request, your tap). If a note was written
+before you answered (you asked for it first) or before you changed your answer, answering on the
+phone rewrites it with how it felt. An answer from the Watch doesn't spend a request in the
+background: the note is marked out of date, with an **Update with how it felt** button.
+
+## Run/walk counts as one workout
+Run/walk intervals the watch saved as separate workouts (run, walk, run, walk) showed as four
+sessions, four prompts, and a plan comparison against a 20-minute piece. Pieces less than ten
+minutes apart are now one workout: running, walking and hiking join each other, anything else
+joins only its own kind, so a bike-then-run brick stays two. Times and distances add up, heart
+rate is averaged over the time, the charts run end to end, and the coach is told it was recorded
+in pieces.
+
+## The pictures are back
+The first two weeks of every plan (the Recovery block) are optional sessions, and optional
+sessions had no place attached, so a new plan showed no background photos at all. An optional
+swim now shows the pool, an optional run the run route, and so on.
+
+## Apple Weather status
+Settings shows whether Apple Weather works for this build, the App ID to enable in the developer
+portal, and a **Check now** button. After the bundle-ID change there was no other way to tell a
+missing portal switch from no forecast yet. The check asks about a fixed place, not yours.
