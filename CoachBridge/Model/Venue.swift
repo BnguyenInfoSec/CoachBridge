@@ -80,7 +80,18 @@ enum VenueSlot {
         case .snow: return snow
         case .fun: return fun
         case .golf: return golf
-        case .rest, .flex: return nil
+        // An optional session still happens somewhere: "Optional easy swim" is at the pool. The
+        // Recovery block is all optional sessions, so returning nil here left every new plan's
+        // first two weeks without a picture.
+        case .flex:
+            switch Prescriber.sport(of: session) {
+            case .swim: return swim
+            case .bike: return (session.indoor ?? false) ? bikeIndoor : bike
+            case .run: return run
+            case .lift: return lift
+            case .other: return nil
+            }
+        case .rest: return nil
         }
     }
 

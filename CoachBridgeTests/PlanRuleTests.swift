@@ -212,6 +212,18 @@ final class VenueTests: XCTestCase {
         XCTAssertNil(VenueSlot.key(for: PlanSession(kind: .flex, title: "Optional")))
     }
 
+    /// The Recovery block is all optional sessions; without this a new plan's first two weeks
+    /// had no picture at all.
+    func testOptionalSessionsBorrowTheirSportsPlace() {
+        XCTAssertEqual(VenueSlot.key(for: PlanSession(kind: .flex, title: "Optional easy swim")), VenueSlot.swim)
+        XCTAssertEqual(VenueSlot.key(for: PlanSession(kind: .flex, title: "Optional easy run")), VenueSlot.run)
+        XCTAssertEqual(VenueSlot.key(for: PlanSession(kind: .flex, title: "Optional easy bike")), VenueSlot.bike)
+        XCTAssertNil(VenueSlot.key(for: PlanSession(kind: .flex, title: "Optional easy session")),
+                     "a session that could be anything has no place")
+        let week = [PlanSession(kind: .rest, title: "Off"), PlanSession(kind: .flex, title: "Optional easy run")]
+        XCTAssertEqual(VenueSlot.hero(of: week)?.title, "Optional easy run")
+    }
+
     func testPickIsStableForADateAndVariesAcrossDays() {
         let list = (0..<3).map { venue(VenueSlot.run, "Spot \($0)", $0) }
         let a = VenuePicker.pick(list, slot: VenueSlot.run, iso: "2026-10-12", pinnedID: nil)
