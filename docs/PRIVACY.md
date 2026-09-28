@@ -37,7 +37,7 @@ one-word recommendation ("Go", "Go easy"), never a health number.
 | Destination | What | When |
 |---|---|---|
 | **Your Google Drive** | One file per day of health metrics, in a folder the app creates | Only if you sign in with Google. The app can see only files it created (`drive.file` scope). |
-| **Your AI provider** (Anthropic or OpenAI) | Your messages, training profile (including any bike, tires and shoes you listed) and plan; a summary of recent health metrics and workouts if "Share my Health summary" is on; the times and titles of your calendar events for the coming week when the plan is adjusted, if calendar reading is on; workout details when you ask for a coach's note | Only when you use the coach, with your own API key. The chat screen shows exactly what the chat sends ("See what Claude sees"). |
+| **Your AI provider** (Anthropic, OpenAI, or a server you set up) | Your messages, training profile (including any bike, tires and shoes you listed) and plan; a summary of recent health metrics and workouts if "Share my Health summary" is on; the times and titles of your calendar events for the coming week when the plan is adjusted, if calendar reading is on; workout details when you ask for a coach's note | Only when you use the coach, with your own API key. The chat screen shows exactly what the chat sends ("See what Claude sees"). |
 | **Apple Weather** | Your training location, rounded to about 1 km | When the plan checks the forecast |
 | **Apple Calendar** | Your planned sessions and training phases, in a "Training" calendar | Only if you turn on calendar writing |
 | **Apple Watch** | Your upcoming sessions, sent over Apple's encrypted connection between your devices | When the Watch app is installed |

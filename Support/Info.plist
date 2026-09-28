@@ -63,11 +63,11 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Coach Bridge reads your calendars so training fits around your schedule, and adds your planned sessions to a separate Training calendar. When you refresh the Plan tab, event times and titles for the next week are sent to Anthropic's Claude API so it can plan around them. Locations, notes and attendees are never read or sent.</string>
+	<string>Coach Bridge reads your calendars so training fits around your schedule, and adds your planned sessions to a separate Training calendar. When the coach updates your plan, event times and titles for the next week are sent to the AI provider you choose in Settings (Anthropic's Claude, OpenAI, or a server you set up) so it can plan around them. Locations, notes and attendees are never read or sent.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Coach Bridge reads your resting heart rate, HRV, sleep, respiratory rate, wrist temperature, blood oxygen, VO2 max, heart-rate recovery, walking heart rate, weight, body fat, activity totals, workouts (with heart rate, power, cadence and distance) and running form metrics. It shows them on your dashboard and once a day saves a summary to a Coach folder in your own Google Drive. If you use the in-app Coach chat with Health sharing on, a summary is sent to Anthropic's Claude API with your message. Nothing is sent anywhere else.</string>
+	<string>Coach Bridge reads your resting heart rate, HRV, sleep, respiratory rate, wrist temperature, blood oxygen, VO2 max, heart-rate recovery, walking heart rate, weight, body fat, activity totals, workouts (with heart rate, power, cadence and distance) and running form metrics. It shows them on your dashboard and once a day saves a summary to a Coach folder in your own Google Drive. When you use the coach, what it needs goes to the AI provider you choose in Settings (Anthropic's Claude, OpenAI, or a server you set up), with your own key: a summary of recent metrics with chat messages and weekly plan updates if Health sharing is on, and a workout's details when you ask for a note on it. Nothing is sent anywhere else.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Coach Bridge uses your approximate location, once, to set where your training forecast comes from. Only rounded coordinates are sent to the weather service; your location isn't tracked.</string>
+	<string>Coach Bridge uses your approximate location, once, to set where your training forecast comes from. Only coordinates rounded to about 1 km are sent to Apple Weather; your location isn't tracked.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
