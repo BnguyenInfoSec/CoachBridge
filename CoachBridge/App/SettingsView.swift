@@ -295,8 +295,14 @@ struct SettingsView: View {
     }
 
     private func saveKey() {
+        let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        // It goes into an HTTP header: visible ASCII only, so it can't smuggle in headers.
+        guard PromptSafety.isPlausibleSecret(key) else {
+            keyError = "That doesn't look like a key — keys are letters, numbers and symbols with no spaces. Paste it again."
+            return
+        }
         do {
-            try Keychain.set(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines),
+            try Keychain.set(key,
                              account: provider.keychainAccount)
             keyDraft = ""
             hasKey = true

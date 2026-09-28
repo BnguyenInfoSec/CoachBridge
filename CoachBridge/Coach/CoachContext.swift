@@ -59,19 +59,21 @@ enum CoachContext {
         let today = e.calendar.startOfDay(for: .now)
         var lines: [String] = []
         let ph = e.phase(for: today)
-        lines.append("Phase: \(ph.name) (\(ph.start) → \(ph.end), \(ph.hours)/wk). Race \(e.raceName) \(e.raceISO). Days to race: \(e.daysToRace(from: today)).")
+        lines.append("Phase: \(ph.name) (\(ph.start) → \(ph.end), \(ph.hours)/wk). Race \(PromptSafety.inline(e.raceName)) \(e.raceISO). Days to race: \(e.daysToRace(from: today)).")
         for i in 0..<14 {
             let d = e.add(today, days: i)
             let day = plan.day(d)
             let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
             let body = day.sessions.map { s -> String in
                 let mins = s.rx?.durationMin.map { " \($0) min" } ?? ""
-                return "\(s.kind.rawValue): \(s.title)\(mins)\(s.addedByAthlete ? " [athlete-added, fixed]" : "")"
+                return "\(s.kind.rawValue): \(PromptSafety.inline(s.title))\(mins)\(s.addedByAthlete ? " [athlete-added, fixed]" : "")"
             }.joined(separator: "; ")
             lines.append("\(day.iso) \(names[e.jsDay(d)]): \(body.isEmpty ? "nothing" : body)")
         }
         if !plan.rules.rules.isEmpty {
-            lines.append("Lasting rules already in force: " + plan.rules.rules.map(\.summary).joined(separator: " | "))
+            // Written by the model in an earlier chat: fenced, so an earlier injected instruction
+            // can't persist as a standing order.
+            lines.append("Lasting rules already in force:\n" + PromptSafety.block(.agreedRules, plan.rules.rules.map { PromptSafety.inline($0.summary, max: 300) }.joined(separator: "\n"), max: 3_000))
         }
         return lines.joined(separator: "\n")
     }
@@ -83,13 +85,15 @@ enum CoachContext {
         You are the endurance coach inside the athlete's Coach Bridge iPhone app.
         Today is \(now.formatted(date: .complete, time: .omitted)).
 
+        \(PromptSafety.dataRule)
+
         About the athlete:
-        \(athlete ?? "They haven't set up a plan yet.")
+        \(athlete.map { PromptSafety.block(.athleteProfile, $0, max: 8_000) } ?? "They haven't set up a plan yet.")
 
         In their own words:
         \(profile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "(nothing added yet — ask about their background if it would change your advice)"
-            : profile.trimmingCharacters(in: .whitespacesAndNewlines))
+            : PromptSafety.block(.athleteNotes, profile, max: 4_000))
 
         How to coach:
         - Base advice on the data below. Say plainly when something is missing or too sparse to judge; never invent numbers.
@@ -113,27 +117,29 @@ enum CoachContext {
         var lines: [String] = []
         if !p.name.isEmpty { lines.append("Name: \(p.name).") }
         if engine.blueprint.hasEvent {
-            lines.append("Training for \(engine.raceName) on \(engine.raceISO) — \(p.eventKind.label).")
+            lines.append("Training for \(PromptSafety.inline(engine.raceName)) on \(engine.raceISO) — \(p.eventKind.label).")
         } else {
             lines.append("Training for \(p.eventKind.label.lowercased()); no race date set.")
         }
         if !p.goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            lines.append("What a good day looks like to them: \(p.goal.trimmingCharacters(in: .whitespacesAndNewlines))")
+            lines.append("What a good day looks like to them: \(PromptSafety.inline(p.goal, max: 400))")
         }
         lines.append("Currently around \(String(format: "%.1f", p.currentWeeklyHours)) h a week, aiming for up to \(String(format: "%.1f", p.peakHours)) h at peak.")
         lines.append("Blocks: " + engine.phases.map { "\($0.name) \($0.start)→\($0.end) (\($0.hours)/wk)" }.joined(separator: "; ") + ".")
         lines.append("Sports in the plan: " + p.sports.map { $0.label.lowercased() }.joined(separator: ", ") + ".")
         lines.append("Trains on: " + p.availableDays.sorted().map { names[$0] }.joined(separator: ", ") + ". Long day: \(names[p.longDay]).")
         if !p.work.weekdays.isEmpty { lines.append("Work/school: \(p.work.summary).") }
-        for c in p.commitments { lines.append("Commitment: \(c.summary).") }
-        for b in p.blackouts { lines.append("Away: \(b.summary).") }
-        for e in p.events { lines.append("\(e.isRace ? "Race" : "Event"): \(e.title) on \(e.dateISO). \(e.detail)") }
+        for c in p.commitments.prefix(20) { lines.append("Commitment: \(PromptSafety.inline(c.summary, max: 160)).") }
+        for b in p.blackouts.prefix(20) { lines.append("Away: \(PromptSafety.inline(b.summary, max: 160)).") }
+        for e in p.events.prefix(20) {
+            lines.append("\(e.isRace ? "Race" : "Event"): \(PromptSafety.inline(e.title)) on \(e.dateISO). \(PromptSafety.inline(e.detail, max: 300))")
+        }
         let kit = p.equipmentList
         lines.append(kit.isEmpty
             ? "Equipment: nothing listed — ask before programming anything that needs kit."
             : "Equipment: " + kit.map { $0.label.lowercased() }.joined(separator: ", ")
               + ". Don't program a session that needs something not on this list.")
-        if let gear = p.gear { lines += gear.coachLines }
+        if let gear = p.gear { lines += gear.coachLines.map { PromptSafety.inline($0, max: 400) } }
         lines.append("Lifting \(p.liftsPerWeek)× a week.")
         if !p.preferredSports.isEmpty {
             lines.append("Enjoys: " + p.preferredSports.map { $0.label.lowercased() }.joined(separator: ", ") + ".")

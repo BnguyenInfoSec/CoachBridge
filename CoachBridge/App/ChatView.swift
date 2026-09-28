@@ -172,7 +172,7 @@ struct ChatView: View {
                 UIPasteboard.general.string = CoachContext.handoffText(d)
                 flash("Copied today's numbers. Paste them into the chat.")
             }
-            if let url = URL(string: projectURL) { openURL(url) }
+            if let url = PromptSafety.webURL(projectURL) { openURL(url) }
         }
     }
 

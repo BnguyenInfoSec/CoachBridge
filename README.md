@@ -241,6 +241,16 @@ Launch arguments override stored defaults without saving them:
 xcrun simctl launch <simulator-udid> <bundle-id> -demo.enabled YES -onboarding.completedVersion 3
 ```
 
+### Text fields and injection testing
+
+Every text input is listed in `tools/text-fields.txt`. Adding or changing one means routing it
+through `PromptSafety` and adding it to `InjectionTests`; a pre-commit hook enforces this. Enable it
+once per clone:
+
+```bash
+git config core.hooksPath tools/githooks
+```
+
 ### Conventions
 
 - Keep logic in `Model/` as pure functions with an injected `Calendar`, so it can be tested

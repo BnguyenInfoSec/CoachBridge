@@ -363,17 +363,17 @@ struct PlanEngine: Sendable {
             lines.append("- Work/school: \(p.work.summary). Sessions go before or after, never during.")
         }
         for c in p.commitments {
-            lines.append("- \(c.summary) stays a rest evening; train before it or let it go.")
+            lines.append("- \(PromptSafety.inline(c.summary, max: 160)) stays a rest evening; train before it or let it go.")
         }
         for b in p.blackouts {
-            lines.append("- \(b.summary).")
+            lines.append("- \(PromptSafety.inline(b.summary, max: 160)).")
         }
         if p.liftsPerWeek == 0 { lines.append("- No lifting in this plan.") }
         if !p.avoidedSports.isEmpty {
             lines.append("- Don't program: " + p.avoidedSports.map { $0.label.lowercased() }.joined(separator: ", ") + ".")
         }
         if !p.notes.isEmpty {
-            lines.append("- In the athlete's own words: " + p.notes.trimmingCharacters(in: .whitespacesAndNewlines))
+            lines.append("- In the athlete's own words:\n" + PromptSafety.block(.athleteNotes, p.notes, max: 2_000))
         }
         return lines.joined(separator: "\n")
     }

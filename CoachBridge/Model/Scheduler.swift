@@ -140,7 +140,8 @@ enum Scheduler {
                 .filter { $0.start < end && $0.end > start }
                 .sorted { ($0.allDay ? 0 : 1, $0.start) < ($1.allDay ? 0 : 1, $1.start) }
                 .map { b -> String in
-                    let title = b.title.map { " " + String($0.prefix(60)) } ?? ""
+                    // Anyone who sends an invite writes this title: one clean line, no tags.
+                    let title = b.title.map { " " + PromptSafety.inline($0, max: 60) } ?? ""
                     return b.allDay ? "all day:\(title)" : "\(tf.string(from: b.start))–\(tf.string(from: b.end))\(title)"
                 }
             return "\(df.string(from: day)): " + (items.isEmpty ? "free" : items.joined(separator: "; "))

@@ -77,14 +77,16 @@ enum PlanAdjuster {
             ? "\(engine.raceName) on \(engine.raceISO)"
             : "general \(p.eventKind.label.lowercased()) — no race date set"
         return """
-        You are the endurance coach behind this athlete's training plan (goal: \(goal)).
+        You are the endurance coach behind this athlete's training plan (goal: \(PromptSafety.inline(goal))).
+
+        \(PromptSafety.dataRule)
         Each time the athlete refreshes their calendar you review the next 7 days against their latest data and adjust only what the data justifies.
 
         \(p.goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" :
-          "What a good race day looks like to them: \(p.goal.trimmingCharacters(in: .whitespacesAndNewlines))\n")
+          "What a good race day looks like to them: \(PromptSafety.inline(p.goal, max: 400))\n")
         Equipment they have — never program a session needing anything else:
         \(p.equipmentList.isEmpty ? "nothing listed" : p.equipmentList.map { $0.label.lowercased() }.joined(separator: ", "))
-        \((p.gear?.coachLines ?? []).joined(separator: "\n"))
+        \((p.gear?.coachLines ?? []).map { PromptSafety.inline($0, max: 400) }.joined(separator: "\n"))
 
         Plan rules (follow them exactly):
         \(engine.lifeRules)
@@ -127,8 +129,17 @@ enum PlanAdjuster {
             let indoor: Bool?
 
             init(_ s: PlanSession) {
-                kind = s.kind; title = s.title; detail = s.detail
-                rx = s.rx; startTime = s.startTime; addedByAthlete = s.addedByAthlete; indoor = s.indoor
+                kind = s.kind; title = PromptSafety.inline(s.title); detail = PromptSafety.inline(s.detail, max: 400)
+                // Targets can be athlete-typed; the prompt cleans them rather than trusting storage did.
+                rx = s.rx.map { r in
+                    var c = r
+                    func t(_ v: String?) -> String? { v.map { PromptSafety.inline($0, max: 200) } }
+                    c.distance = t(r.distance); c.intensity = t(r.intensity); c.heartRate = t(r.heartRate)
+                    c.power = t(r.power); c.pace = t(r.pace); c.fuelBefore = t(r.fuelBefore)
+                    c.fuelDuring = t(r.fuelDuring); c.fuelAfter = t(r.fuelAfter); c.notes = t(r.notes)
+                    return c
+                }
+                startTime = s.startTime; addedByAthlete = s.addedByAthlete; indoor = s.indoor
             }
         }
     }
@@ -148,14 +159,14 @@ enum PlanAdjuster {
         lines.append("Days to race: \(engine.daysToRace(from: today)).")
         lines.append("Schedule: " + engine.profile.work.summary
                      + (engine.profile.commitments.isEmpty ? ""
-                        : ". Commitments: " + engine.profile.commitments.map(\.summary).joined(separator: "; "))
+                        : ". Commitments: " + engine.profile.commitments.prefix(20).map { PromptSafety.inline($0.summary, max: 160) }.joined(separator: "; "))
                      + (engine.profile.blackouts.isEmpty ? ""
-                        : ". Away: " + engine.profile.blackouts.map(\.summary).joined(separator: "; ")))
+                        : ". Away: " + engine.profile.blackouts.prefix(20).map { PromptSafety.inline($0.summary, max: 160) }.joined(separator: "; ")))
         lines.append("Zones: FTP \(s.ftpWatts.map { "\($0) W" } ?? "not tested yet"); LTHR \(s.lthrBpm.map { "\($0) bpm" } ?? "unknown").")
         lines.append("")
-        lines.append("About the athlete:\n\(CoachContext.athleteText(engine.profile, engine: engine))")
+        lines.append("About the athlete:\n" + PromptSafety.block(.athleteProfile, CoachContext.athleteText(engine.profile, engine: engine), max: 8_000))
         let own = profile.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !own.isEmpty { lines.append("In their own words:\n\(own)") }
+        if !own.isEmpty { lines.append("In their own words:\n" + PromptSafety.block(.athleteNotes, own, max: 4_000)) }
         lines.append("")
         lines.append("PLAN FOR THE NEXT \(windowDays) DAYS (with current targets):\n\(planJSON)")
         lines.append("")
@@ -174,7 +185,10 @@ enum PlanAdjuster {
             """)
         }
         lines.append("")
-        lines.append("CALENDAR (times and titles from the athlete's own calendars):\n\(calendarText ?? "Not connected — assume the usual windows.")")
+        // Event titles can be written by anyone who sends the athlete an invite: the classic
+        // indirect prompt-injection route. Fenced, and the system prompt says it's data.
+        lines.append("CALENDAR (times and titles from the athlete's own calendars):\n"
+                     + (calendarText.map { PromptSafety.block(.calendar, $0, max: 4_000) } ?? "Not connected — assume the usual windows."))
         if let weatherText, !weatherText.isEmpty {
             lines.append("")
             lines.append("WEATHER FORECAST (training location):\n\(weatherText)")
@@ -182,7 +196,8 @@ enum PlanAdjuster {
         lines.append("")
         if let added, !added.isEmpty {
             lines.append("")
-            lines.append("SESSIONS THE ATHLETE ADDED (fixed — plan around them):\n" + added.joined(separator: "\n"))
+            lines.append("SESSIONS THE ATHLETE ADDED (fixed — plan around them):\n"
+                         + PromptSafety.block(.athleteSessions, added.prefix(12).map { PromptSafety.inline($0, max: 400) }.joined(separator: "\n"), max: 5_000))
         }
         lines.append("")
         lines.append("Call \(toolName) with today's call and any days you change.")

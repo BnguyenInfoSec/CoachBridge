@@ -1,0 +1,23 @@
+#!/bin/bash
+# Coach Bridge pre-commit: the text-field SOP (CLAUDE.md, "Text fields").
+# Enabled per clone with:  git config core.hooksPath tools/githooks
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+staged=$(git diff --cached --name-only)
+touches_fields=$(git diff --cached -U0 -- '*.swift' | grep -E '^[+-].*(TextField\(|SecureField\(|TextEditor\()' || true)
+touches_safety=$(echo "$staged" | grep -E 'PromptSafety\.swift|InjectionTests\.swift|text-fields\.txt|CoachContext\.swift|PlanAdjuster\.swift|WorkoutReviewer\.swift' || true)
+
+[ -z "$touches_fields" ] && [ -z "$touches_safety" ] && exit 0
+
+echo "pre-commit: text fields or prompt code changed — running the injection SOP."
+tools/check-text-fields.sh
+echo "pre-commit: running InjectionTests (about a minute)…"
+if ! xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' \
+        -derivedDataPath "${TMPDIR:-/tmp}/cb-hook-dd" test -only-testing:CoachBridgeTests/InjectionTests \
+        > "${TMPDIR:-/tmp}/cb-hook-test.log" 2>&1; then
+    grep -E 'error:|failed' "${TMPDIR:-/tmp}/cb-hook-test.log" | head -20
+    echo "pre-commit: InjectionTests failed — commit blocked. Full log: ${TMPDIR:-/tmp}/cb-hook-test.log"
+    exit 1
+fi
+echo "pre-commit: InjectionTests passed."

@@ -140,6 +140,29 @@ is told to plan around them and `RuleEngine` never touches them.
 **Liquid Glass is isolated.** Every iOS 26 API lives in `App/Theme.swift` behind
 `if #available(iOS 26.0, *)` with an `.ultraThinMaterial` fallback. One file to fix.
 
+## 4a. Text fields — standard operating procedure
+
+Anything typed into the app, and anything from outside it (calendar event titles written by whoever
+sent the invite, FIT device names), is untrusted. It can reach LLM prompts, the Training calendar,
+the Watch, URLs and HTTP headers. Every time a text field is **added or changed**:
+
+1. **Route it.** If its text reaches a prompt: `PromptSafety.inline` for one-line values,
+   `PromptSafety.block(tag, …)` for longer text, and every system prompt carries
+   `PromptSafety.dataRule`. URLs go through `PromptSafety.webURL` (https only); keys and tokens
+   through `PromptSafety.isPlausibleSecret`. Clean at the point the prompt is built — don't trust
+   that storage cleaned it.
+2. **Test it.** Add the field to `InjectionTests.fields` (or the non-prompt tests). The suite runs
+   every field against every payload (prompt injection, forged fence tags, fake turns, bidi and
+   zero-width hiding, Unicode tag smuggling, control characters, CR/LF, JSON break-out, a 100k
+   flood) in every prompt, and checks nothing forbidden survives, no tag can be forged, no injected
+   line escapes its fence, and the prompt stays bounded.
+3. **Record the review.** `tools/check-text-fields.sh --update` updates `tools/text-fields.txt`,
+   the reviewed list of every input.
+
+Enforced: `tools/githooks/pre-commit` (enable per clone with `git config core.hooksPath
+tools/githooks`) runs the checker and `InjectionTests` whenever a commit touches a text field or
+the prompt builders, and blocks the commit if either fails. Never bypass it with `--no-verify`.
+
 ## 5. Conventions
 
 - Comments explain **why**, not what — the bug that prompted the code, the trade-off taken.

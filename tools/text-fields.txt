@@ -1,0 +1,35 @@
+# Reviewed text inputs. Regenerate with tools/check-text-fields.sh --update, only after
+# the field is routed through PromptSafety (if it reaches a prompt, URL or header) and
+# covered by CoachBridgeTests/InjectionTests.swift. See CLAUDE.md, "Text fields".
+CoachBridge/App/ChatView.swift|TextField("Message", text: $draft, axis: .vertical)
+CoachBridge/App/ChatView.swift|TextField("Name", text: $newTitle)
+CoachBridge/App/PlanDetailViews.swift|TextField("-117.10", value: $weather.longitude, format: .number.precision(.fractionLength(2)))
+CoachBridge/App/PlanDetailViews.swift|TextField("32.63", value: $weather.latitude, format: .number.precision(.fractionLength(2)))
+CoachBridge/App/PlanDetailViews.swift|TextField("Name", text: $weather.locationName)
+CoachBridge/App/PlanDetailViews.swift|TextField("bpm", value: $plan.settings.lthrBpm, format: .number)
+CoachBridge/App/PlanDetailViews.swift|TextField("watts", value: $plan.settings.ftpWatts, format: .number)
+CoachBridge/App/ProfileSetupView.swift|TextField("Anything else the coach should know", text: $draft.notes, axis: .vertical)
+CoachBridge/App/ProfileSetupView.swift|TextField("Event name (optional)", text: $draft.eventName)
+CoachBridge/App/ProfileSetupView.swift|TextField("Finish strong, under 6 hours, still smiling", text: $draft.goal, axis: .vertical)
+CoachBridge/App/ProfileSetupView.swift|TextField("Gearing, e.g. 50/34, 11–34 or 42T, 10–44", text: gear(\.gearing))
+CoachBridge/App/ProfileSetupView.swift|TextField("Model — \(shoe.category.example)", text: $shoe.model)
+CoachBridge/App/ProfileSetupView.swift|TextField("Name", text: $title)
+CoachBridge/App/ProfileSetupView.swift|TextField("Notes", text: $detail, axis: .vertical).lineLimit(2...5)
+CoachBridge/App/ProfileSetupView.swift|TextField("Tires, e.g. GP5000 S TR", text: gear(\.tires))
+CoachBridge/App/ProfileSetupView.swift|TextField("What is it", text: $title)
+CoachBridge/App/ProfileSetupView.swift|TextField("What is it", text: $title)
+CoachBridge/App/ProfileSetupView.swift|TextField("Your bike, e.g. Canyon Speedmax CF 8", text: gear(\.bike))
+CoachBridge/App/ProfileSetupView.swift|TextField("psi", value: Binding(
+CoachBridge/App/ProfileSetupView.swift|TextField(healthKg.map { "\(Int(($0 / 0.453_592).rounded())) lb from Health" } ?? "lb",
+CoachBridge/App/SessionEditor.swift|TextField("Route, pace, who's coming — anything Claude should know",
+CoachBridge/App/SessionEditor.swift|TextField("Title", text: $session.title)
+CoachBridge/App/SessionEditor.swift|TextField(defaults?[keyPath: field] ?? "—", text: text(field), axis: .vertical)
+CoachBridge/App/SettingsView.swift|SecureField(provider.keyPrompt, text: $keyDraft)
+CoachBridge/App/SettingsView.swift|TextField("", text: $profile, axis: .vertical)
+CoachBridge/App/SettingsView.swift|TextField("Claude project URL", text: $projectURL)
+CoachBridge/App/SettingsView.swift|TextField("My plan page (optional)", text: $planURL)
+CoachBridge/App/SettingsView.swift|TextField("Or type a model name", text: $model)
+CoachBridge/App/SettingsView.swift|TextField("Server URL", text: $hostedURL)
+CoachBridge/App/VenueViews.swift|TextField("Name", text: $name)
+CoachBridge/App/VenueViews.swift|TextField("Note — distance, lanes, what it's good for", text: $note)
+CoachBridge/App/WorkoutFeedbackViews.swift|TextField("Legs were flat, wind on the way back, nailed the fuelling…",

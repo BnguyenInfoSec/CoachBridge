@@ -43,10 +43,12 @@ enum WorkoutReviewer {
         You are the endurance coach inside this athlete's Coach Bridge app, writing the short note \
         that appears under a session they just finished.
 
-        Who they are:
-        \(CoachContext.athleteText(p, engine: engine))
+        \(PromptSafety.dataRule)
 
-        \(want.isEmpty ? "" : "What a good race day looks like to them: \(want)")
+        Who they are:
+        \(PromptSafety.block(.athleteProfile, CoachContext.athleteText(p, engine: engine), max: 8_000))
+
+        \(want.isEmpty ? "" : "What a good race day looks like to them: \(PromptSafety.inline(want, max: 400))")
 
         How to write it:
         - Talk to them, not about them. Second person, no greeting, no sign-off.
@@ -97,19 +99,21 @@ enum WorkoutReviewer {
         lines.append("")
         lines.append("Where they are: \(phase.name) block (\(phase.start) → \(phase.end), \(phase.hours) a week). \(phase.goal)")
         if engine.blueprint.hasEvent {
-            lines.append("\(engine.daysToRace(from: today)) days to \(engine.raceName) on \(engine.raceISO).")
+            lines.append("\(engine.daysToRace(from: today)) days to \(PromptSafety.inline(engine.raceName)) on \(engine.raceISO).")
         }
 
         lines.append("")
         if let planned {
-            lines.append("The plan called for: \(planned.title)\(planned.detail.isEmpty ? "" : " — \(planned.detail)")")
+            lines.append("The plan called for: \(PromptSafety.inline(planned.title))\(planned.detail.isEmpty ? "" : " — \(PromptSafety.inline(planned.detail, max: 400))")")
         }
         lines.append("Planned versus actual:")
         lines.append(compare.promptText)
 
         lines.append("")
         if let feel {
-            lines.append("How they said it felt: \(feel.summary)")
+            lines.append("How they said it felt: RPE \(feel.rpe)/10, \(feel.mood.label.lowercased()).")
+            let note = feel.note.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !note.isEmpty { lines.append("Their note:\n" + PromptSafety.block(.workoutNote, note, max: 1_000)) }
             lines.append("(RPE is Borg CR10: \(feel.rpe)/10 means \"\(WorkoutFeel.rpeLabel(feel.rpe).lowercased())\".)")
         } else {
             lines.append("They haven't said how it felt — don't guess, and don't ask them in the note.")

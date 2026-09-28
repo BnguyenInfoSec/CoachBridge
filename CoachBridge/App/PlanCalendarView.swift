@@ -111,7 +111,7 @@ struct PlanCalendarView: View {
                     Menu {
                         Button("Refresh now", systemImage: "arrow.clockwise") { Task { await refresh() } }
                         Button("Plan settings", systemImage: "slider.horizontal.3") { showSettings = true }
-                        if !planURL.isEmpty {
+                        if PromptSafety.webURL(planURL) != nil {
                             Button("Open my plan page", systemImage: "safari") { showPage = true }
                         }
                         if plan.update != nil {
@@ -128,7 +128,8 @@ struct PlanCalendarView: View {
                 Task { await weather.refresh(); await AppServices.shared.syncSchedule() }
             }) { PlanSettingsView() }
             .fullScreenCover(isPresented: $showPage) {
-                if let url = URL(string: planURL) { SafariView(url: url) { showPage = false }.ignoresSafeArea() }
+                // https only: SFSafariViewController crashes the app on any other scheme.
+                if let url = PromptSafety.webURL(planURL) { SafariView(url: url) { showPage = false }.ignoresSafeArea() }
             }
             }
         }

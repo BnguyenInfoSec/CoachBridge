@@ -83,8 +83,8 @@ enum LLMFactory {
     static func current(maxTokens: Int) -> (client: LLMClient, provider: LLMProvider, model: String)? {
         let defaults = UserDefaults.standard
         let provider = LLMProvider(rawValue: defaults.string(forKey: LLMProvider.key) ?? "") ?? .anthropic
-        let model = defaults.string(forKey: AppSettings.modelKey).flatMap { $0.isEmpty ? nil : $0 }
-            ?? provider.defaultModel
+        let model = defaults.string(forKey: AppSettings.modelKey)
+            .flatMap { PromptSafety.isPlausibleModelName($0) ? $0 : nil } ?? provider.defaultModel
         guard let secret = Keychain.get(account: provider.keychainAccount), !secret.isEmpty else { return nil }
 
         switch provider {
@@ -94,7 +94,8 @@ enum LLMFactory {
             return (OpenAIClient(apiKey: secret, model: model, maxTokens: maxTokens), provider, model)
         case .hosted:
             let base = defaults.string(forKey: AppSettings.hostedURLKey) ?? ""
-            guard let url = URL(string: base), !base.isEmpty else { return nil }
+            // https only: the access token rides on every request.
+            guard let url = PromptSafety.webURL(base) else { return nil }
             return (HostedClient(baseURL: url, token: secret, model: model, maxTokens: maxTokens), provider, model)
         }
     }
