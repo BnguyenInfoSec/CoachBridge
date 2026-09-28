@@ -101,7 +101,7 @@ the result. Findings are checked against the code and tests before anything chan
 |---|---|---|---|---|
 HEAD
 fi
-result=$(grep -c -E '^[[:space:]]*[-*0-9].*\*\*(High|Medium|Low)' "$work/review.md" || true)
+result=$(grep -o -i -E '\*\*(high|medium|low)\b' "$work/review.md" | wc -l | tr -d ' ')
 if grep -qi '^no findings' "$work/review.md"; then verdict="No findings"; else verdict="${result:-?} finding(s)"; fi
 version=$(codex --version 2>/dev/null | awk '{print $NF}')
 printf '| %s | %s | %s bytes | %s | %s |\n' "$(date '+%Y-%m-%d %H:%M')" "$what" "$bytes" "${version:-?}" "$verdict" >> "$log"

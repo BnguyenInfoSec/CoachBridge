@@ -6,8 +6,23 @@ import UIKit
 /// screen, so it works from a sheet, a tab or a button deep in the plan.
 @MainActor
 final class ConsentGate {
-    static let shared = ConsentGate()
-    private var asking = false
+    static let shared = ConsentGate(askUser: { await ConsentGate.present($0) },
+                                    granted: { ConsentGate.isGranted($0) })
+
+    /// Shows the question and returns the answer. Injected so the queueing below can be tested
+    /// without UIKit.
+    private let askUser: @MainActor (ConsentScope) async -> Bool
+    private let granted: @MainActor (ConsentScope) -> Bool
+
+    init(askUser: @escaping @MainActor (ConsentScope) async -> Bool,
+         granted: @escaping @MainActor (ConsentScope) -> Bool) {
+        self.askUser = askUser
+        self.granted = granted
+    }
+    /// The question on screen, if any. Callers that arrive while it's open share its answer,
+    /// and a question for the other scope waits its turn, so two screens never race: the
+    /// second presentation would fail and leave its caller waiting forever.
+    private var inFlight: (id: UUID, scope: ConsentScope, answer: Task<Bool, Never>)?
 
     /// The recipient for a scope as the app is set up right now.
     static func recipient(_ scope: ConsentScope) -> (id: String, name: String) {
@@ -35,25 +50,48 @@ final class ConsentGate {
     /// True if the athlete has agreed, asking them now if they haven't. False if they decline,
     /// or if there's nothing on screen to ask from (a background launch never asks).
     func require(_ scope: ConsentScope) async -> Bool {
-        if Self.isGranted(scope) { return true }
-        guard !asking, let top = await Self.topController() else { return false }
-        asking = true
-        defer { asking = false }
+        while let current = inFlight {
+            let answer = await current.answer.value
+            if current.scope == scope { return answer }
+            // Whoever gets here first clears a finished question, so nobody waits on it again.
+            if inFlight?.id == current.id { inFlight = nil }
+        }
+        if granted(scope) { return true }
+        let id = UUID()
+        let ask = askUser
+        let task = Task { await ask(scope) }
+        inFlight = (id, scope, task)
+        let answer = await task.value
+        if inFlight?.id == id { inFlight = nil }
+        return answer
+    }
+
+    private static func present(_ scope: ConsentScope) async -> Bool {
+        guard let top = await Self.topController() else { return false }
         let who = Self.recipient(scope)
         return await withCheckedContinuation { (done: CheckedContinuation<Bool, Never>) in
             var answered = false
             weak var host: UIViewController?
-            let view = ConsentView(copy: Consent.copy(scope, recipientName: who.name)) { allowed in
+            func finish(_ allowed: Bool) {
                 guard !answered else { return }
                 answered = true
                 if allowed { Consent.grant(scope, recipient: who.id) }
-                host?.dismiss(animated: true)
                 done.resume(returning: allowed)
+            }
+            let view = ConsentView(copy: Consent.copy(scope, recipientName: who.name)) { allowed in
+                host?.dismiss(animated: true)
+                finish(allowed)
             }
             let controller = UIHostingController(rootView: view)
             controller.isModalInPresentation = true        // answer it; no swipe-away
             host = controller
             top.present(controller, animated: true)
+            // UIKit drops a presentation it can't make without calling back. Treat that as
+            // "not now" rather than leaving the caller waiting for an answer that never comes.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                if controller.presentingViewController == nil { finish(false) }
+            }
         }
     }
 
