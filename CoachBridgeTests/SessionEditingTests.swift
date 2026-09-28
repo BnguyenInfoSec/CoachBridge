@@ -52,6 +52,42 @@ final class SessionEditingTests: XCTestCase {
         XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: []).count, 2)
     }
 
+    // MARK: Deleting a planned session
+
+    func testDeletingAPlannedSessionTakesItOffTheDay() {
+        let day = [planned(.run, "Tempo run"), planned(.swim, "Technique")]
+        let removal = CustomSession.removing(day[0], on: "2026-10-03")
+        XCTAssertTrue(removal.isRemoval)
+        XCTAssertEqual(removal.replaces, .run)
+        XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: [removal]).map(\.title), ["Technique"])
+        XCTAssertTrue(removal.line().contains("deleted"), "the coach is told, so it doesn't put it back")
+        XCTAssertTrue(removal.line().contains("Tempo run"))
+    }
+
+    func testADeletionIsntAWorkoutSoOptionalSessionsStay() {
+        let day = [PlanSession(kind: .flex, title: "Optional easy swim"), planned(.run, "Tempo run")]
+        let removal = CustomSession.removing(day[1], on: "2026-10-03")
+        XCTAssertEqual(CustomSession.remaining(planned: day, replacedBy: [removal]).map(\.title), ["Optional easy swim"])
+    }
+
+    func testAnOptionalSessionCanBeDeletedToo() {
+        let optional = PlanSession(kind: .flex, title: "Optional easy bike")
+        XCTAssertTrue(CustomSession.remaining(planned: [optional],
+                                              replacedBy: [CustomSession.removing(optional, on: "2026-10-03")]).isEmpty)
+    }
+
+    /// A deletion survives being saved and loaded, and a file from before deletions existed
+    /// still decodes.
+    func testDeletionsRoundTripAndOldFilesStillLoad() throws {
+        let removal = CustomSession.removing(planned(.bike, "Long ride"), on: "2026-10-03")
+        let back = try JSONDecoder().decode(CustomSession.self, from: JSONEncoder().encode(removal))
+        XCTAssertTrue(back.isRemoval)
+        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(removal)) as? [String: Any])
+        json.removeValue(forKey: "removed")
+        let old = try JSONDecoder().decode(CustomSession.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertFalse(old.isRemoval)
+    }
+
     func testCommittingAnOptionalSessionLeavesNoOptionalBehind() {
         let optional = PlanSession(kind: .flex, title: "Optional easy swim")
         let mine = CustomSession.committing(optional, on: "2026-10-03", startTime: nil)

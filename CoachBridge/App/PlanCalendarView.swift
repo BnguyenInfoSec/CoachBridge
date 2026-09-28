@@ -913,6 +913,20 @@ private struct DayDetail: View {
                 .buttonStyle(.plain)
             }
 
+            ForEach(day.removed) { r in
+                HStack {
+                    Label("Deleted: \(r.title)", systemImage: "trash").font(.caption).foregroundStyle(.secondary)
+                        .strikethrough()
+                    Spacer()
+                    Button("Restore") {
+                        plan.custom.delete(r)
+                        Task { await AppServices.shared.syncSchedule() }
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+                .padding(.horizontal, 4)
+            }
+
             Button { showAdd = true } label: {
                 Label("Add your own session", systemImage: "plus.circle.fill")
                     .font(.subheadline.weight(.semibold))

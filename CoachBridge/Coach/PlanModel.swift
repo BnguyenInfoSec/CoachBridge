@@ -12,6 +12,8 @@ struct DayPlan: Sendable {
     let change: PlanUpdate.DayChange?
     let milestones: [Milestone]
     let done: [WorkoutSummary]
+    /// Planned sessions the athlete deleted from this day, so the day can offer to restore them.
+    var removed: [CustomSession] = []
 }
 
 /// Owns the training calendar: plan settings, Claude's latest weekly update (rate-limited to one
@@ -128,9 +130,10 @@ final class PlanModel: ObservableObject {
         // A planned session the athlete edited is now one of theirs; drop the original.
         sessions = CustomSession.remaining(planned: sessions, replacedBy: mine)
         // The athlete's own sessions always stand, exactly as entered.
-        sessions += mine.map { merged($0.planSession(), on: d, rx: rx) }
+        sessions += mine.filter { !$0.isRemoval }.map { merged($0.planSession(), on: d, rx: rx) }
         return DayPlan(date: d, iso: iso, sessions: sessions, original: original, change: change,
-                       milestones: milestones(on: iso, engine: e), done: workoutsByDay[iso] ?? [])
+                       milestones: milestones(on: iso, engine: e), done: workoutsByDay[iso] ?? [],
+                       removed: mine.filter(\.isRemoval))
     }
 
     /// Fills anything left blank (by Claude or by a hand-entered session) from the plan's own rules.
@@ -227,6 +230,11 @@ final class PlanModel: ObservableObject {
             errorText = LLMFactory.missingSetupMessage(for: "get plan updates")
             return
         }
+        // Before the rate-limit counter is written: saying no must not cost the next minute.
+        guard await ConsentGate.shared.require(.ai) else {
+            errorText = Consent.declinedMessage
+            return
+        }
 
         // Count the attempt before calling, so failures can't be retried faster than once a minute.
         let now = Date.now
@@ -244,8 +252,11 @@ final class PlanModel: ObservableObject {
         let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         let planned = (0..<PlanAdjuster.windowDays).map { i -> PlanAdjuster.DayInput in
             let d = e.add(today, days: i)
-            var list = e.sessions(on: d).map { rx.prescribe($0, on: d) }
-            list += custom.forDay(e.iso(d)).map { merged($0.planSession(), on: d, rx: rx) }
+            // What the day actually holds: the planned sessions the athlete hasn't edited or
+            // deleted, then their own. Listing the originals too showed Claude both copies.
+            let mine = custom.forDay(e.iso(d))
+            var list = CustomSession.remaining(planned: e.sessions(on: d).map { rx.prescribe($0, on: d) }, replacedBy: mine)
+            list += mine.filter { !$0.isRemoval }.map { merged($0.planSession(), on: d, rx: rx) }
             return .init(date: e.iso(d), day: names[e.jsDay(d)], sessions: list)
         }
 

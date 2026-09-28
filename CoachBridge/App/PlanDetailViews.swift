@@ -29,6 +29,7 @@ struct SessionDetailView: View {
     @State private var preview: WorkoutPlan?
     @State private var showPreview = false
     @State private var confirmDelete = false
+    @State private var confirmDeletePlanned = false
 
     var body: some View {
         // Hoisted: `plan.engine` rebuilds the engine on every access.
@@ -112,6 +113,9 @@ struct SessionDetailView: View {
                     if let note = tire.note {
                         Label(note, systemImage: "cloud.rain").font(.caption).foregroundStyle(Palette.warning)
                     }
+                    if let wheels = rideWheelAdvice(engine: engine) {
+                        Label(wheels, systemImage: "wind").font(.caption).foregroundStyle(Palette.warning)
+                    }
                 } footer: {
                     Text(plan.profile.gear?.pressuresCustom == true
                          ? "Your pressures from Your training → Your bike."
@@ -126,7 +130,9 @@ struct SessionDetailView: View {
             } header: {
                 Text("Fueling")
             } footer: {
-                Text("From the plan's gut-training table: 60 g/h in Base 1, 70–80 in Base 2, 80–90 in the build. One savory bite an hour, the Santa Cruz lesson.")
+                Text(plan.profile.fuel == nil
+                     ? "From the plan's gut-training table: 60 g/h in Base 1, 70–80 in Base 2, 80–90 in the build. Add what you use in Your training → Fuel and it's named here."
+                     : "From the plan's gut-training table: 60 g/h in Base 1, 70–80 in Base 2, 80–90 in the build, with your own products from Your training → Fuel.")
             }
 
             if let notes = rx.notes {
@@ -159,10 +165,19 @@ struct SessionDetailView: View {
                     Button(d.replaces == nil ? "Delete session" : "Go back to the planned session", role: .destructive) {
                         confirmDelete = true
                     }
+                    if d.replaces != nil {
+                        Button("Delete this session", role: .destructive) { confirmDeletePlanned = true }
+                    }
                 } footer: {
                     if d.replaces != nil {
-                        Text("Removes your edits and brings back the session the plan had for this day.")
+                        Text("Going back removes your edits and brings back the session the plan had. Deleting takes it off the day altogether; you can restore it from the day.")
                     }
+                }
+            } else if !session.addedByAthlete && shown.kind != .rest {
+                Section {
+                    Button("Delete this session", role: .destructive) { confirmDeletePlanned = true }
+                } footer: {
+                    Text("Takes it off this day, your calendar and your Watch. The coach plans the rest of the week around the gap and won't put it back. You can restore it from the day.")
                 }
             }
         }
@@ -175,6 +190,9 @@ struct SessionDetailView: View {
         .modifier(WorkoutPreviewModifier(plan: preview, isPresented: $showPreview))
         .confirmationDialog("Remove your version of this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button(draft?.replaces == nil ? "Delete session" : "Go back to the plan", role: .destructive) { remove() }
+        }
+        .confirmationDialog("Delete \(shown.title) from this day?", isPresented: $confirmDeletePlanned, titleVisibility: .visible) {
+            Button("Delete session", role: .destructive) { deletePlanned(engine: engine) }
         }
         .onAppear {
             if draft == nil, let id = session.customID {
@@ -229,6 +247,28 @@ struct SessionDetailView: View {
         let wet = (weather.forecast?.at(start)?.precipProb ?? 0) >= 50
         let healthKg = dashboard.data?.today.metrics[.weight].map { $0 * 0.453_592 }
         return gear.pressure(forRide: s, wet: wet, riderKg: healthKg)
+    }
+
+    /// Which wheels to fit when the forecast is gusty, if the athlete owns a choice of depths.
+    private func rideWheelAdvice(engine: PlanEngine) -> String? {
+        let start = slot?.start ?? draft.flatMap { Scheduler.time($0.startTime, on: engine.date($0.date), calendar: engine.calendar) }
+            ?? date
+        return plan.profile.gear?.wheelAdvice(gustMph: weather.forecast?.at(start)?.gustMph)
+    }
+
+    /// Deletes a planned session from its day. An edited copy becomes the deletion record, so
+    /// the edits don't linger as a second session.
+    private func deletePlanned(engine: PlanEngine) {
+        var removal = CustomSession.removing(session, on: draft?.date ?? engine.iso(date))
+        if let d = draft {
+            removal.id = d.id
+            removal.replaces = d.replaces
+        }
+        plan.custom.save(removal)
+        draft = nil
+        unsent = false
+        Task { await AppServices.shared.syncSchedule() }          // free: calendar and Watch only
+        dismiss()
     }
 
     private func rework() async {

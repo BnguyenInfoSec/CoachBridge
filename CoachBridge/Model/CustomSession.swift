@@ -21,6 +21,11 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
     /// Set when this began as a planned session the athlete edited: that day's first planned
     /// session of this kind is hidden, so the edit replaces it instead of doubling the day.
     var replaces: SessionKind? = nil
+    /// The athlete deleted the planned session this replaces: the day goes without it, and the
+    /// coach is told not to put it back. Deleting this record restores the session.
+    var removed: Bool? = nil
+
+    var isRemoval: Bool { removed == true }
 
     /// Longest text kept per field. All of it is typed by the athlete and then sent to Claude
     /// and written to the calendar, so it's capped rather than trusted.
@@ -38,6 +43,9 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
 
     /// One line for Claude.
     func line() -> String {
+        if isRemoval {
+            return "\(date) · the athlete deleted the planned \(kind.rawValue) session \"\(title)\". Leave the day without it and don't move it to another day unless they ask."
+        }
         var s = "\(date) \(startTime) · \(kind.rawValue) · \(title) · \(durationMin) min"
         let targets = [rx?.distance, rx?.intensity, rx?.heartRate, rx?.power, rx?.pace].compactMap { $0 }
         if !targets.isEmpty { s += " · \(targets.joined(separator: ", "))" }
@@ -74,6 +82,15 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
         let stripped = c.title.replacingOccurrences(of: "(?i)^optional\\s*", with: "", options: .regularExpression)
         c.title = stripped.isEmpty ? c.kind.label : stripped.prefix(1).uppercased() + stripped.dropFirst()
         c.replaces = .flex
+        return c.sanitized()
+    }
+
+    /// A planned session the athlete deleted. Stored like an edit so it survives the coach's
+    /// weekly update and can be restored.
+    static func removing(_ s: PlanSession, on iso: String) -> CustomSession {
+        var c = adopting(s, on: iso, startTime: nil)
+        c.replaces = s.kind
+        c.removed = true
         return c.sanitized()
     }
 
@@ -132,7 +149,7 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
         for kind in mine.compactMap(\.replaces) {
             if let i = out.firstIndex(where: { $0.kind == kind && !$0.addedByAthlete }) { out.remove(at: i) }
         }
-        if mine.contains(where: { $0.kind != .rest && $0.kind != .flex }) {
+        if mine.contains(where: { !$0.isRemoval && $0.kind != .rest && $0.kind != .flex }) {
             out.removeAll { $0.kind == .flex && !$0.addedByAthlete }
         }
         return out
