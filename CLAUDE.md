@@ -67,7 +67,16 @@ App/      SwiftUI views, theme, palette
 Shared/   the only code the phone and Watch share: WatchSnapshot, WatchFeelReport, GlanceStore
 Watch/    watchOS app (WatchModel, views, FuelTimer)
 WatchWidgets/  complications
+SharedPhone/   iPhone app + widget extension only: PhoneGlance, GoNoGo, SessionActivityAttributes
+PhoneWidgets/  iPhone widget and Live Activity UI
 ```
+
+**Anything that can show on a locked screen carries no health numbers**: `WatchGlance`,
+`PhoneGlance` and `SessionActivityAttributes`. Tests check the first two.
+
+**New fields on persisted models must be optional or decode leniently.** `AthleteProfile` decodes
+all or nothing and a failed load falls back to an empty profile — a required new field would wipe
+everyone's setup. See `Gear` and `GearTests`.
 
 **The Watch never computes, reads Health or calls an LLM.** The phone builds a versioned
 `WatchSnapshot` (`WatchLink`) and the watch displays it. Feel reports come back through

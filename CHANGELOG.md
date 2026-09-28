@@ -781,3 +781,48 @@ coach when the week is adjusted, so the policy says so.
 "Test key" checks an API key before you rely on it, using the provider's free model list —
 nothing is generated, nothing billed. And a missing key now says which provider and that it's
 missing on this iPhone; the chat used to say "Add your Anthropic API key" even with OpenAI chosen.
+
+---
+
+# v2.10 — fixes, your gear, projected times, WeatherKit, widgets
+
+## Fixed
+- **A walk showed the lifting icon** in Recent workouts. Everything that isn't swim, bike or run
+  shares one bucket for the load chart, and its icon was the dumbbell. Each workout now carries its
+  own activity's icon — walk, hike, golf, snowboard, yoga — everywhere a recorded workout appears.
+- **"What the coach knows" had no way out.** Return adds a new line in a multi-line field, and the
+  form didn't let go of the keyboard. Drag the form down, or tap Done in the top corner; the same
+  fix is on every form with a long text field. (The usual "Done above the keyboard" didn't render
+  on iOS 27 at all, so it lives in the navigation bar.)
+
+## Snowboarding
+Add a snowboard day like any other session. It gets its own targets (hard on the way down, easy on
+the lift, counts as leg strength), fuelling for cold and altitude, and it goes to the Watch as an
+open-ended snowboarding workout. "Snowboard — a few runs" used to be read as a run; not any more.
+
+## Your bike, tires and shoes
+"What you've got" asks what you ride and what tires (and tubeless or not), and which running shoes
+you have — super trainer, max cushion, daily, carbon racer, stability, trail. The coach gets all of
+it, and is asked to say which pair suits a run. Saving it can't wipe the rest of your profile: a
+new required field would have done exactly that, so the gear is stored the careful way, with a
+test.
+
+## Projected race times
+The dashboard projects your finish from the last eight weeks: swim pace, your quicker rides, and
+your best run carried to race distance (with the usual fade for running off the bike). It's a
+range, it says what each leg is based on, and legs without enough data say "typical". Give your
+other races a distance and they get a time too. The race-day fuelling now follows your projected
+leg times.
+
+## Apple Weather
+Forecasts come from Apple Weather only. The app always tried it first, but the entitlement was
+never added, so every forecast had quietly been coming from the backup. **One step for you:** in
+the Apple Developer portal, turn on WeatherKit for the Coach Bridge App ID under both Capabilities
+and App Services. Until then the weather card says exactly that.
+
+## Widget and Live Activities
+A Today widget — home screen or Lock Screen — with today's session and a go / no-go: Go, Go easy,
+Swap to easy (recovery's down and the session is hard), Rest day, or Go by feel. Start a Live
+Activity from any session or the race-day plan: the session, a running clock, the target and the
+fuel cadence, on the Lock Screen, in the Dynamic Island and on your Watch. Neither shows a health
+number, since both can be seen on a locked phone.

@@ -63,6 +63,13 @@ A session that's also in Apple Health counts once. Only totals are kept, never t
 **Fitness, fatigue and form.** The CTL/ATL/TSB training-load model, computed from your workouts,
 on the dashboard and in what the coach sees, always labelled with how it was estimated.
 
+**Projected race times.** A finish time for your goal race and any other race on your calendar,
+leg by leg from your own recent training, shown as a range and labelled with what it's based on.
+
+**Widgets and Live Activities.** A Today widget for the home and Lock Screen with your session and
+a go / no-go call from your recovery, and a Live Activity with a running clock and fuel cadence
+for a session or a race.
+
 **Race-day plan.** Pacing for each leg from your FTP and threshold heart rate, and a fuelling
 timeline built from what you practised in training, on the phone and on your wrist.
 
@@ -88,6 +95,8 @@ CoachBridge/
 Shared/     The only code the phone and Watch share: the snapshot and feel-report values
 Watch/      The watchOS app: shows the phone's snapshot, sends back how workouts felt
 WatchWidgets/  Complications (next session, race countdown)
+SharedPhone/   Shared by the iPhone app and its widget extension: widget data, Live Activity attributes
+PhoneWidgets/  The iPhone widget and the Live Activity UI
 ```
 
 **Phone and Watch.** The phone is the source of truth. It sends the Watch a small, versioned
@@ -132,8 +141,9 @@ Health data is sensitive. These are design constraints, and the code is built to
   Reports from the Watch are validated before they're saved.
 - **Minimal data from other devices.** FIT imports keep session totals only: routes, GPS positions
   and per-second records are never stored, nor is the file.
-- **Watch faces show no health data.** Complications draw on a locked watch, so they read a
-  separate cache holding only the next session and race countdown.
+- **Nothing numeric on a locked screen.** Watch complications, the iPhone widget and Live
+  Activities can all show while the device is locked, so they carry the session and a one-word
+  recommendation, never a health number (tested).
 - **Export and delete.** Everything the app stored can be exported as JSON or deleted from the
   phone and Watch in one step (Settings → Your data). See the draft
   [privacy policy](docs/PRIVACY.md).
@@ -183,8 +193,10 @@ open CoachBridge.xcodeproj
 
 The app builds and runs with placeholder Google values; only Drive sign-in is unavailable.
 
-The Watch app and its complications share an App Group, `group.<BUNDLE_ID_PREFIX>.CoachBridge`.
-With automatic signing, Xcode registers it on the first signed build to a device.
+The Watch app, its complications, the iPhone app and its widget share an App Group,
+`group.<BUNDLE_ID_PREFIX>.CoachBridge`. With automatic signing, Xcode registers it on the first
+signed build to a device. Apple Weather also needs WeatherKit turned on for the App ID under both
+Capabilities and App Services in the Apple Developer portal.
 
 ### Google Drive export (optional)
 
@@ -216,7 +228,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 245 tests and runs in about two seconds. It covers the data contract, the plan engine
+The suite has 274 tests and runs in about two seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
@@ -240,7 +252,7 @@ xcrun simctl launch <simulator-udid> <bundle-id> -demo.enabled YES -onboarding.c
 
 ## Project status
 
-Personal project in active development, currently **v2.9.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.10.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the
@@ -252,6 +264,9 @@ Not yet verified:
   face, and fuel reminders during a Workout app session. The phone-to-Watch snapshot is verified in
   paired simulators.
 - A FIT file from a real device (the parser is tested against generated files)
+- Apple Weather on a signed build: it needs WeatherKit enabled for the App ID in the developer portal
+- The Today widget placed on a home or Lock Screen, and Live Activities on a real Dynamic Island
+  (the Live Activity is verified on the simulator's Lock Screen)
 - Apple Calendar phase banners and WorkoutKit sync since the v2.0 plan rewrite
 - The OpenAI provider; the hosted-server client is a stub
 - Coaching quality: the plan engine is tested for structure, not for whether its weeks are good
