@@ -7,6 +7,9 @@ import XCTest
 @MainActor
 final class ConsentGateTests: XCTestCase {
     /// Stands in for the athlete: records each question and answers when the test says so.
+    /// Main-actor like the real screen: unisolated, its async `ask` ran on a background thread
+    /// and wrote `pending` while the test read it, a race that crashed about one run in thirty.
+    @MainActor
     private final class FakeUser {
         var asked: [ConsentScope] = []
         var granted: Set<ConsentScope> = []
