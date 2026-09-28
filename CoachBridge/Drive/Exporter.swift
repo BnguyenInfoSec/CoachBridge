@@ -57,6 +57,10 @@ final class Exporter: ObservableObject {
 
     func export(_ record: DayRecord) async {
         guard !isExporting else { return }
+        guard await ConsentGate.shared.require(.drive) else {
+            lastError = "Nothing was sent. Allow Drive export in Settings → Data sharing to save your summaries."
+            return
+        }
         isExporting = true
         lastError = nil
         defer { isExporting = false }
@@ -99,6 +103,13 @@ final class Exporter: ObservableObject {
         if !auth.isSignedIn { await auth.restore() }
         guard auth.isSignedIn, auth.hasDriveScope else {
             log.info("Auto run skipped: not signed in to Google")
+            return false
+        }
+        // Automatic runs never ask; they wait until the athlete has said yes on screen.
+        let allowed = trigger == .manual ? await ConsentGate.shared.require(.drive) : ConsentGate.isGranted(.drive)
+        guard allowed else {
+            log.info("Auto run skipped: no consent for Drive")
+            lastError = "Drive export is paused until you allow it in Settings → Data sharing."
             return false
         }
 

@@ -121,6 +121,18 @@ final class ChatModel: ObservableObject {
             errorText = LLMFactory.missingSetupMessage(for: "chat with the coach")
             return
         }
+        // Nothing leaves the phone until the athlete has said yes to this provider. Asked here,
+        // the first time, then the message goes on as if they'd just tapped Send.
+        guard ConsentGate.isGranted(.ai) else {
+            Task {
+                if await ConsentGate.shared.require(.ai) {
+                    self.send(raw, dashboard: dashboard, plan: plan)
+                } else {
+                    self.errorText = Consent.declinedMessage
+                }
+            }
+            return
+        }
         errorText = nil
         messages.append(ChatMessage(role: .user, text: text))
         let reply = ChatMessage(role: .assistant, text: "")

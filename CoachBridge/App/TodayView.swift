@@ -108,7 +108,9 @@ struct TodayView: View {
                     Task { await google.signOut() }
                 }
             } else {
-                Button("Sign in with Google") { Task { await google.signIn() } }
+                Button("Sign in with Google") {
+                    Task { if await ConsentGate.shared.require(.drive) { await google.signIn() } }
+                }
                 if let err = google.lastError {
                     Text(err).foregroundStyle(.red).font(.footnote)
                 }

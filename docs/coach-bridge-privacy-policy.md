@@ -18,8 +18,8 @@ analytics and no advertising.
 - **FIT files you import** from a bike computer or watch. Only each session's totals are kept
   (sport, start time, duration, distance, average heart rate and power, device name). Routes, GPS
   positions and per-second records are never stored, and the file itself isn't kept.
-- **What you enter**: your training profile (including your bike, groupset, tires, tire pressures
-  and running shoes, if you add them), sessions, notes, how workouts felt, and photos you add of
+- **What you enter**: your training profile (including your bike, groupset, wheelsets, tires,
+  tire pressures, running shoes and what you eat and drink in training, if you add them), sessions, notes, how workouts felt, and photos you add of
   places you train. If you type your weight for the tire-pressure calculator, it stays on your
   iPhone and is never sent anywhere.
 
@@ -40,11 +40,19 @@ did your run feel?").
 
 | Destination | What | When |
 |---|---|---|
-| **Your Google Drive** | One file per day of health metrics, in a folder the app creates | Only if you sign in with Google. The app can see only files it created (`drive.file` scope). |
-| **Your AI provider** (Anthropic, OpenAI, or a server you set up) | Your messages, training profile (including any bike, tires and shoes you listed) and plan; a summary of recent health metrics and workouts if "Share my Health summary" is on; the times and titles of your calendar events for the coming week when the plan is adjusted, if calendar reading is on; workout details when you ask for a coach's note | Only when you use the coach, with your own API key. The chat screen shows exactly what the chat sends ("See what Claude sees"). |
+| **Your Google Drive** | One file per day of health metrics, in a folder the app creates | Only after you allow it and sign in with Google. The app can see only files it created (`drive.file` scope). |
+| **Your AI provider** (Anthropic, OpenAI, or a server you set up) | Your messages, training profile (including any bike, wheelsets, tires, shoes and fuel you listed) and plan; a summary of recent health metrics and workouts if "Share my Health summary" is on; the times and titles of your calendar events for the coming week when the plan is adjusted, if calendar reading is on; workout details when you ask for a coach's note | Only when you use the coach, with your own API key. The chat screen shows exactly what the chat sends ("See what Claude sees"). |
 | **Apple Weather** | Your training location, rounded to about 1 km | When the plan checks the forecast |
 | **Apple Calendar** | Your planned sessions and training phases, in a "Training" calendar | Only if you turn on calendar writing |
 | **Apple Watch** | Your upcoming sessions, sent over Apple's encrypted connection between your devices | When the Watch app is installed |
+
+**Nothing goes to your AI provider or your Google Drive until you've said yes.** The first time
+something would be sent, the app shows what would go, what never goes, where it goes and how to
+withdraw, and waits for you to choose Allow or Don't allow. Your answer covers one recipient:
+switching from Anthropic to OpenAI, or to a different server, asks again. You can withdraw either
+consent at any time in Settings → Data sharing; from then on nothing more is sent, and what was
+already sent stays with the provider or in your Drive. Automatic Drive exports never ask in the
+background: without your consent they don't run.
 
 Your AI provider processes what it is sent under its own terms. Anthropic and OpenAI both say they
 don't train models on API data by default; check their current terms. Coach Bridge never sells,
@@ -70,6 +78,7 @@ the coach is told it isn't real.
   scheduled Watch workouts, revokes its access to Google Drive, deletes your API keys and,
   optionally, the Training calendar. Files already in your Google Drive stay there for you to
   manage. Deleting the app also removes everything it stored on the device.
+- **Data sharing** (Settings) turns sharing with your AI provider and Google Drive on or off.
 - Health, calendar and location access can be changed at any time in iOS Settings.
 
 ## Children

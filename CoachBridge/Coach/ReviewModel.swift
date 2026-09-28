@@ -117,6 +117,10 @@ final class ReviewModel: ObservableObject {
             errorText = LLMFactory.missingSetupMessage(for: "get a coach's note")
             return
         }
+        guard await ConsentGate.shared.require(.ai) else {
+            errorText = Consent.declinedMessage
+            return
+        }
 
         let system = WorkoutReviewer.systemPrompt(engine: engine, demo: false)
         let user = WorkoutReviewer.userText(

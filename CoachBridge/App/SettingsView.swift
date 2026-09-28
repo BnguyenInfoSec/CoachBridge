@@ -39,9 +39,35 @@ struct SettingsView: View {
     @State private var exportedURL: URL?
     @State private var exportError: String?
     @State private var confirmDelete = false
+    /// Bumped when a consent changes, so the toggles re-read UserDefaults.
+    @State private var consentVersion = 0
     @State private var deleted = false
 
     private var provider: LLMProvider { LLMProvider(rawValue: providerRaw) ?? .anthropic }
+
+    /// Shows who would receive the data, and turns sharing on (through the same explanation
+    /// the app shows the first time) or off.
+    private func consentRow(_ scope: ConsentScope, label: String) -> some View {
+        let who = ConsentGate.recipient(scope)
+        return Toggle(isOn: Binding(
+            get: { consentVersion >= 0 && ConsentGate.isGranted(scope) },
+            set: { on in
+                if on {
+                    Task {
+                        _ = await ConsentGate.shared.require(scope)
+                        consentVersion += 1
+                    }
+                } else {
+                    Consent.revoke(scope)
+                    consentVersion += 1
+                }
+            })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                Text(who.name).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
 
     private var weatherStatusText: String {
         switch weather.status {
@@ -246,6 +272,15 @@ struct SettingsView: View {
                     Text("Apple Weather")
                 } footer: {
                     Text(weatherFooter)
+                }
+
+                Section {
+                    consentRow(.ai, label: "AI coach")
+                    consentRow(.drive, label: "Google Drive export")
+                } header: {
+                    Text("Data sharing")
+                } footer: {
+                    Text("Nothing leaves this iPhone for your AI provider or your Drive until you allow it here or when the app first asks. Turning one off stops it from then on; what was already sent stays with the provider or in your Drive. Switching AI provider asks again.")
                 }
 
                 Section {
