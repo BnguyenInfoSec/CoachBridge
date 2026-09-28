@@ -52,7 +52,9 @@ final class TrendReader {
                                         sport: Self.sport(for: $0.workoutActivityType)) }
         let weekly = Stats.weeklyLoad(loadInput, calendar: calendar)
         let ignored = Stats.implausibleCount(loadInput)
-        let recent = workouts.prefix(5).map(summary)
+        // More than the five shown: CombinedSource joins back-to-back pieces before trimming,
+        // and four run/walk pieces would otherwise leave two rows.
+        let recent = workouts.prefix(20).map(summary)
 
         // Baselines: resting HR from the days before today; HRV last 7 days vs the whole window.
         let rhrBaseline = rhr.filter { $0.day < todayStart }.map(\.value)

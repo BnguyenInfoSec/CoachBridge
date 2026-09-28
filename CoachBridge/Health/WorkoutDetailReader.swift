@@ -28,6 +28,36 @@ struct WorkoutDetail: Sendable {
     let zones: [ZoneTime]?
 }
 
+extension WorkoutDetail {
+    /// The pieces of a merged workout as one: series end to end, zones added up, averages
+    /// weighted by each piece's length. Nil when none of the pieces could be read.
+    static func joined(_ pieces: [WorkoutDetail], as summary: WorkoutSummary) -> WorkoutDetail? {
+        guard let last = pieces.max(by: { $0.end < $1.end }) else { return nil }
+        func weighted(_ value: (WorkoutDetail) -> Double?) -> Double? {
+            let known = pieces.compactMap { p in value(p).map { ($0, p.summary.duration) } }
+            let time = known.reduce(0) { $0 + $1.1 }
+            return time > 0 ? known.reduce(0) { $0 + $1.0 * $1.1 } / time : nil
+        }
+        func total(_ value: (WorkoutDetail) -> Double?) -> Double? {
+            let known = pieces.compactMap(value)
+            return known.isEmpty ? nil : known.reduce(0, +)
+        }
+        var zoneMinutes: [Int: Double] = [:]
+        for z in pieces.compactMap(\.zones).joined() { zoneMinutes[z.zone, default: 0] += z.minutes }
+        return WorkoutDetail(
+            summary: summary, end: last.end,
+            maxHR: pieces.compactMap(\.maxHR).max(),
+            activeKcal: total(\.activeKcal),
+            elevationGainMeters: total(\.elevationGainMeters),
+            avgPower: weighted(\.avgPower),
+            maxPower: pieces.compactMap(\.maxPower).max(),
+            avgCadence: weighted(\.avgCadence),
+            heartRate: pieces.flatMap(\.heartRate).sorted { $0.time < $1.time },
+            power: pieces.flatMap(\.power).sorted { $0.time < $1.time },
+            zones: zoneMinutes.isEmpty ? nil : zoneMinutes.keys.sorted().map { ZoneTime(zone: $0, minutes: zoneMinutes[$0]!) })
+    }
+}
+
 enum WorkoutMath {
     /// Friel-style zones as fractions of LTHR (run and bike differ slightly at the bottom).
     static func zoneBounds(sport: Sport) -> [Double] {

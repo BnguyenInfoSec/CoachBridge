@@ -81,6 +81,9 @@ enum WorkoutReviewer {
         let phase = engine.phase(for: today)
 
         lines.append("Session just finished: \(CoachContext.workoutLine(workout))")
+        if let pieces = WorkoutSegments.describe(workout) {
+            lines.append(PromptSafety.inline(pieces, max: 600) + ".")
+        }
         if let d = detail {
             var extra: [String] = []
             if let v = d.maxHR { extra.append("max HR \(Int(v.rounded()))") }

@@ -44,6 +44,9 @@ struct WorkoutSummary: Identifiable, Hashable, Sendable {
     /// The activity's own symbol. `sport` is a coarse bucket for load charts, and walks, hikes,
     /// golf and strength all fall into `.other` — whose dumbbell made a walk look like lifting.
     var activitySymbol: String? = nil
+    /// The recordings this one was merged from, oldest first, when back-to-back pieces were
+    /// joined into one session (run/walk intervals saved as separate workouts). Empty otherwise.
+    var segments: [WorkoutSummary] = []
 
     var icon: String { activitySymbol ?? sport.symbol }
 }
