@@ -64,8 +64,13 @@ A session that's also in Apple Health counts once. Only totals are kept, never t
 **Fitness, fatigue and form.** The CTL/ATL/TSB training-load model, computed from your workouts,
 on the dashboard and in what the coach sees, always labelled with how it was estimated.
 
-**Projected race times.** A finish time for your goal race and any other race on your calendar,
-leg by leg from your own recent training, shown as a range and labelled with what it's based on.
+**Projected race times.** Its own dashboard card: a finish time for your goal race and every other
+race on your calendar, split into swim, bike, run and transitions from your own recent training,
+shown as a range and labelled with what it's based on.
+
+**Your bike, set up properly.** Groupset and gearing, tires and rims, and a tire-pressure
+calculator (weight, width, tubes or tubeless, hooked or hookless, surface) that fills in your
+pressures and shows the right one on every outdoor ride, eased for rain.
 
 **Widgets and Live Activities.** A Today widget for the home and Lock Screen with your session and
 a go / no-go call from your recovery, and a Live Activity with a running clock and fuel cadence
@@ -260,7 +265,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 274 tests and runs in about two seconds. It covers the data contract, the plan engine
+The suite has 313 tests and runs in about four seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
@@ -294,7 +299,7 @@ git config core.hooksPath tools/githooks
 
 ## Project status
 
-Personal project in active development, currently **v2.10.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.11.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the

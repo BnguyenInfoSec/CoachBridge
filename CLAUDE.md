@@ -187,8 +187,9 @@ the prompt builders, and blocks the commit if either fails. Never bypass it with
 - **No one has seen a real coach's note.** The `review_workout` prompt has never hit a live model,
   and the note's quality is the whole feature.
 - Privacy policy still needed before TestFlight external testing.
-- `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty: the one place
-  `Model/` reads the clock. Known, not yet fixed.
+- `AthleteProfile.startDate` still falls back to `Date()` for an unfinished or demo profile — the
+  one place `Model/` reads the clock. Real profiles are pinned (`pinningStart`, v2.11); before
+  that, every real plan restarted daily.
 - The Watch app has only run in paired simulators. Feel answered on the Watch, complications on a
   face, and fuel notifications during a Workout session haven't been seen on a real watch.
 - FIT import is tested with generated files only; no real device file has been parsed yet.

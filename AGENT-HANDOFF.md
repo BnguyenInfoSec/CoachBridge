@@ -51,7 +51,7 @@ A training companion that does four things:
 4. **Coach.** An in-app chat with an LLM that can see the athlete's data and propose plan changes,
    plus a written note reacting to each completed workout.
 
-Current version **2.10.0**. Distribution is personal: Xcode install, TestFlight later. Not on the App
+Current version **2.11.0**. Distribution is personal: Xcode install, TestFlight later. Not on the App
 Store and not currently intended for it (see §8).
 
 ---

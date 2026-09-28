@@ -826,3 +826,52 @@ Swap to easy (recovery's down and the session is hard), Rest day, or Go by feel.
 Activity from any session or the race-day plan: the session, a running clock, the target and the
 fuel cadence, on the Lock Screen, in the Dynamic Island and on your Watch. Neither shows a health
 number, since both can be seen on a locked phone.
+
+---
+
+# v2.11 — security, your bike, and a plan that finally moves
+
+## Your plan was restarting every day
+The biggest fix in this release. The plan's start date was only ever saved for the built-in
+sample, never for a real profile, so every real plan started again each morning: always week 0,
+the volume never ramped, recovery weeks and phases slid forward. Your start is now fixed (to today,
+the first time this version runs — the original setup day was never recorded), and Your training
+has a **Plan starts** date if you want to set the real one.
+
+## Projected times get their own card
+Every race with a distance, split into swim, bike, run and transitions, with the finish and its
+range. Legs without enough recent training say "typical".
+
+## Your bike
+A **Your bike** section: groupset (Shimano Di2 and mechanical, SRAM AXS including the XPLR 1×
+lines, Campagnolo), gearing, tires, width, tubes or tubeless, hooked or hookless rims, what you're
+riding — and a **tire-pressure calculator** that fills your pressures in from your weight until you
+set your own. It stops at what the tire width is usually rated for, and at 72.5 psi on hookless
+rims. Every outdoor ride's session screen shows its pressure, eased when rain is likely at the
+start. The race-day plan reminds you to charge Di2/AXS and set pressures that morning. Your
+weight stays on the phone.
+
+## Optional sessions
+"Make it a planned session" turns an optional run, ride or swim into one you've committed to.
+
+## Security
+- **Prompt injection.** Anything typed — and calendar invite titles, which other people write —
+  is cleaned and fenced before it reaches the coach, and the coach is told that text is data,
+  never instructions. The AI's own replies are cleaned too before they're shown, saved or reused.
+  Web addresses must be https (a typo in the plan-page link used to crash the app), and keys are
+  checked before they're saved.
+- **Tested every time.** A suite throws 14 kinds of injection at every text field in every
+  prompt; writing it found four leaks, now fixed. A pre-commit hook runs it whenever a text field
+  or the prompt code changes, and blocks the commit if it fails.
+- **`docs/SECURITY.md`**: information-flow maps, the threat model, and how the app lines up
+  against the OWASP Top 10 for LLM applications and NIST's secure development framework.
+- **Permission prompts** now name every AI provider the app can send to.
+
+## Privacy policy
+It's in the app at Settings → Privacy policy, and in the repository as
+`docs/coach-bridge-privacy-policy.md`.
+
+## Smaller fixes
+The Watch app, complications and widget now carry the app's version (a mismatch blocks App Store
+uploads). The workout journal's clean-up had never run, so it grew forever; it now keeps a year,
+and FIT imports keep two.
