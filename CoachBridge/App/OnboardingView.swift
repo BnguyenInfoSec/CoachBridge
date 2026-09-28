@@ -129,7 +129,7 @@ struct OnboardingView: View {
                  body: """
                  Your Apple Health data, your training plan, and a coach that can see both.
 
-                 Five tabs: Today is your numbers, Coach is the chat, Plan is the calendar, Sync sends your data to Drive, Settings is everything else.
+                 Five tabs: Dashboard is your season and today's numbers, Coach is the chat, Plan is the calendar, Sync is today's data and an optional Google Drive export, Settings is everything else.
                  """,
                  tint: Palette.series1,
                  art: ("venue-bayshore-run", .morning)),
@@ -191,9 +191,9 @@ struct OnboardingView: View {
             Step(id: "privacy", symbol: "lock.fill",
                  title: "Where your data goes",
                  body: """
-                 Health data stays on the phone except for the summary sent with each coach message, and only while sharing is on — the chat menu shows exactly what was sent.
+                 Nothing leaves the phone until you allow it. The first time the coach would see your data, or the Drive export would run, the app shows exactly what goes where and waits for your OK. You can change either in Settings → Data sharing.
 
-                 Chats and photos are stored on this iPhone with full file protection. The Drive export writes only to its own folder.
+                 Google Drive is optional: skip it and everything else still works. Chats, notes and photos are stored on this iPhone with full file protection.
                  """,
                  tint: Palette.neutral),
         ]
