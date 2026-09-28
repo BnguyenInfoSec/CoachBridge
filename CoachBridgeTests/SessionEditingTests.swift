@@ -105,3 +105,26 @@ final class SessionEditingTests: XCTestCase {
         XCTAssertEqual(c.line(), "2026-10-03 06:00 · bike · Hill repeats · 90 min · 40 km, 240–260 W · indoor")
     }
 }
+
+final class CommitOptionalTests: XCTestCase {
+    func testOptionalRunBecomesAPlannedRun() {
+        let opt = PlanSession(kind: .flex, title: "Optional easy run", detail: "20 min", rx: Prescription(durationMin: 20))
+        let c = CustomSession.committing(opt, on: "2026-10-01", startTime: "17:30")
+        XCTAssertEqual(c.kind, .run)
+        XCTAssertEqual(c.title, "Easy run")
+        XCTAssertEqual(c.replaces, .flex, "it takes the optional slot's place")
+        XCTAssertEqual(c.startTime, "17:30")
+        XCTAssertTrue(c.planSession().addedByAthlete)
+    }
+
+    func testSwimAndSpinAreRecognised() {
+        XCTAssertEqual(CustomSession.committing(PlanSession(kind: .flex, title: "Optional easy swim"), on: "2026-10-01", startTime: nil).kind, .swim)
+        XCTAssertEqual(CustomSession.committing(PlanSession(kind: .flex, title: "Optional spin"), on: "2026-10-01", startTime: nil).kind, .bike)
+    }
+
+    func testTheOptionalOriginalIsReplacedNotDoubled() {
+        let opt = PlanSession(kind: .flex, title: "Optional easy bike")
+        let c = CustomSession.committing(opt, on: "2026-10-01", startTime: nil)
+        XCTAssertTrue(CustomSession.remaining(planned: [opt], replacedBy: [c]).isEmpty)
+    }
+}

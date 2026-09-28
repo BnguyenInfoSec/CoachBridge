@@ -58,6 +58,25 @@ struct CustomSession: Codable, Identifiable, Hashable, Sendable {
         return c.sanitized()
     }
 
+    /// An optional session made definite: the sport it actually is (from its title — "Optional
+    /// easy run" is a run), "Optional" dropped from the title, and adopted like any edit, so it
+    /// replaces the optional slot and Claude plans around it.
+    static func committing(_ s: PlanSession, on iso: String, startTime: String?) -> CustomSession {
+        var c = adopting(s, on: iso, startTime: startTime)
+        guard s.kind == .flex else { return c }
+        switch Prescriber.sport(of: s) {
+        case .swim: c.kind = .swim
+        case .bike: c.kind = .bike
+        case .run: c.kind = .run
+        case .lift: c.kind = .lift
+        case .other: break                     // can't tell: stays optional in kind, but committed
+        }
+        let stripped = c.title.replacingOccurrences(of: "(?i)^optional\\s*", with: "", options: .regularExpression)
+        c.title = stripped.isEmpty ? c.kind.label : stripped.prefix(1).uppercased() + stripped.dropFirst()
+        c.replaces = .flex
+        return c.sanitized()
+    }
+
     /// Clamps every field to something sane. Applied on every save: the values come from text
     /// fields and end up in Claude's prompt, the calendar and the Watch.
     func sanitized() -> CustomSession {

@@ -53,6 +53,21 @@ struct SessionDetailView: View {
                 }
             }
 
+            if shown.kind == .flex, draft == nil {
+                Section {
+                    Button {
+                        let c = CustomSession.committing(session, on: engine.iso(date), startTime: slotTime(engine))
+                        draft = c
+                        unsent = true
+                        plan.custom.save(c)
+                    } label: {
+                        Label("Make it a planned session", systemImage: "checkmark.circle")
+                    }
+                } footer: {
+                    Text("Turns this optional session into one you've committed to: it counts in the week, goes to your calendar and Watch as planned, and the coach plans around it.")
+                }
+            }
+
             SessionFields(session: editable(engine: engine), defaults: rx, calendar: engine.calendar)
 
             if unsent {
