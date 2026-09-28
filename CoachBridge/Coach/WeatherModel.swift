@@ -17,6 +17,9 @@ final class WeatherModel: ObservableObject {
     /// Settings because a missing portal switch looked exactly like "no forecast yet".
     @Published private(set) var status: ServiceStatus = .unchecked
     @Published private(set) var statusCheckedAt: Date?
+    /// What Apple actually said when the last check failed, for telling a portal switch apart from
+    /// a propagation delay or an expired profile. Error type and code only; no location in it.
+    @Published private(set) var statusDetail: String?
     @Published var locationName: String { didSet { save() } }
     /// Nothing is fetched until the athlete says where they train. Without this the app used
     /// one person's city for everyone.
@@ -75,7 +78,7 @@ final class WeatherModel: ObservableObject {
             errorText = AppleWeather.isSetupProblem(error)
                 ? "Apple Weather isn't enabled for this app yet. In the Apple Developer portal, turn on WeatherKit for the App ID under both Capabilities and App Services, then rebuild."
                 : "Weather unavailable: \(error.localizedDescription)"
-            record(ServiceStatus(error))
+            record(ServiceStatus(error), detail: Self.describe(error))
             log.error("Forecast failed: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -89,9 +92,15 @@ final class WeatherModel: ObservableObject {
         }
     }
 
-    private func record(_ s: ServiceStatus) {
+    private func record(_ s: ServiceStatus, detail: String? = nil) {
         status = s
         statusCheckedAt = .now
+        statusDetail = detail
+    }
+
+    static func describe(_ error: Error) -> String {
+        let ns = error as NSError
+        return "\(String(describing: type(of: error))) · \(ns.domain) \(ns.code) · \(String(describing: error).prefix(160))"
     }
 
     /// Asks WeatherKit for one day at a fixed place (Apple Park), so the check works before a
@@ -103,7 +112,7 @@ final class WeatherModel: ObservableObject {
             try await AppleWeather.probe()
             record(.working)
         } catch {
-            record(ServiceStatus(error))
+            record(ServiceStatus(error), detail: Self.describe(error))
         }
         log.info("WeatherKit check: \(self.status == .working ? "working" : "failed", privacy: .public)")
     }

@@ -326,6 +326,9 @@ struct SettingsView: View {
                         .foregroundStyle(weatherStatusColor)
                     }
                     .accessibilityElement(children: .combine)
+                    if let detail = weather.statusDetail, weather.status != .working {
+                        Text("Apple said: \(detail)").font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
                     if let at = weather.statusCheckedAt {
                         LabeledContent("Last checked", value: at.formatted(date: .abbreviated, time: .shortened))
                     }
