@@ -50,8 +50,14 @@ struct AnthropicClient: LLMClient {
         } catch {
             return AsyncThrowingStream { $0.finish(throwing: error) }
         }
+        let feature = UsageContext.feature, model = self.model
         return AsyncThrowingStream { continuation in
             let task = Task {
+                var usage = TokenUsage.zero
+                // Recorded however the stream ends: tokens used before a cancel are still billed.
+                defer {
+                    if usage != .zero { UsageMeter.record(usage, feature: feature, provider: "anthropic", model: model) }
+                }
                 do {
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
                     guard let http = response as? HTTPURLResponse else { throw APIError.stream("no response") }
@@ -63,6 +69,10 @@ struct AnthropicClient: LLMClient {
                     var toolName: String?
                     var toolJSON = ""
                     for try await line in bytes.lines {
+                        if let u = UsageParsing.anthropicStream(line: line) {
+                            if let i = u.input { usage.input = i }
+                            if let o = u.output { usage.output = o }
+                        }
                         switch Self.raw(line: line) {
                         case .text(let t):
                             continuation.yield(.text(t))
@@ -140,6 +150,10 @@ struct AnthropicClient: LLMClient {
         guard let http = response as? HTTPURLResponse else { throw APIError.stream("no response") }
         guard http.statusCode == 200 else {
             throw APIError.http(http.statusCode, Self.errorMessage(data) ?? "no details")
+        }
+        // Before parsing: a reply the app can't use was still paid for.
+        if let usage = UsageParsing.anthropic(response: data) {
+            UsageMeter.record(usage, feature: UsageContext.feature, provider: "anthropic", model: model)
         }
         return try Self.toolInput(from: data, name: name)
     }

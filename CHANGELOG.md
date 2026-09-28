@@ -955,3 +955,13 @@ your edited copy of it.
 Every Codex review now leaves a row in `docs/review-log.md`. Codex found a real race in the
 consent screen (two requests at once could leave one waiting forever), and then that the fix had
 no tests; both are fixed.
+
+# v2.14 — what the coach costs
+
+## AI usage
+Settings → **AI usage** shows what the coach has cost: calls, tokens and an estimated price, per
+feature (chat, weekly updates, coach's notes), for this month, the last 30 days or 13 months. The
+counts come from what the provider reports for each call; the price is an estimate at list prices,
+and the screen says which prices it assumed. **Share these numbers** sends only the counts and
+dollars. Nothing about what was asked or answered is kept. This is the groundwork for pricing a
+subscription: the beta measures the real cost per athlete instead of guessing it.

@@ -282,8 +282,11 @@ final class PlanModel: ObservableObject {
                                             added: Array(addedLines),
                                             effortText: AppServices.shared.review.journal.effortSummary())
         do {
-            let data = try await setup.client.runTool(system: PlanAdjuster.systemPrompt(engine: e),
-                                                      user: user, tool: PlanAdjuster.tool)
+            let client = setup.client
+            let system = PlanAdjuster.systemPrompt(engine: e)
+            let data = try await UsageContext.$feature.withValue(.planUpdate) {
+                try await client.runTool(system: system, user: user, tool: PlanAdjuster.tool)
+            }
             let parsed = try PlanAdjuster.parse(data, window: Set(planned.map(\.date)), model: setup.model, now: now)
             update = parsed
             Self.saveUpdate(parsed)

@@ -21,6 +21,7 @@ final class AppServices {
     let venues: VenueStore
     let review: ReviewModel
     let prompter: FeelPrompter
+    let usage: UsageMeter
     let watchLink: WatchLink
 
     private init() {
@@ -39,12 +40,14 @@ final class AppServices {
         venues = VenueStore()
         review = ReviewModel()
         prompter = FeelPrompter()
+        usage = UsageMeter()
         watchLink = WatchLink()
         // The journal's prune existed but was never called, so it grew forever.
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
         review.journal.prune(before: AthleteProfile.iso(cal.date(byAdding: .year, value: -1, to: today)!))
         fit.prune(before: cal.date(byAdding: .year, value: -2, to: today)!)
+        usage.prune(before: cal.date(byAdding: .month, value: -13, to: today)!)
     }
 
     /// Demo mode was turned on or off. Everything derived from Health has to be dropped and

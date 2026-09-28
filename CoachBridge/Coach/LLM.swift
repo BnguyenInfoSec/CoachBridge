@@ -181,8 +181,13 @@ struct OpenAIClient: LLMClient {
     var baseURL = URL(string: "https://api.openai.com/v1/chat/completions")!
 
     func stream(system: String, messages: [ChatMessage], tools: [[String: Any]] = []) -> AsyncThrowingStream<AnthropicClient.StreamEvent, Error> {
-        AsyncThrowingStream { continuation in
+        let feature = UsageContext.feature, model = self.model
+        return AsyncThrowingStream { continuation in
             let task = Task {
+                var usage: TokenUsage?
+                defer {
+                    if let usage { UsageMeter.record(usage, feature: feature, provider: "openai", model: model) }
+                }
                 do {
                     let request = try makeRequest(system: system, messages: messages, tools: tools, stream: true)
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
@@ -195,8 +200,10 @@ struct OpenAIClient: LLMClient {
                         let payload = String(line.dropFirst(6))
                         if payload == "[DONE]" { break }
                         guard let data = payload.data(using: .utf8),
-                              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                              let choice = (root["choices"] as? [[String: Any]])?.first,
+                              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                        // The last chunk carries the counts and no choices.
+                        if let u = UsageParsing.openAI(root) { usage = u }
+                        guard let choice = (root["choices"] as? [[String: Any]])?.first,
                               let delta = choice["delta"] as? [String: Any] else { continue }
 
                         if let text = delta["content"] as? String, !text.isEmpty {
@@ -232,6 +239,9 @@ struct OpenAIClient: LLMClient {
         try forceTool(named: tool["name"] as? String ?? "", in: &request)
         let (data, response) = try await URLSession.shared.data(for: request)
         try Self.check(response, data: data)
+        if let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let usage = UsageParsing.openAI(root) {
+            UsageMeter.record(usage, feature: UsageContext.feature, provider: "openai", model: model)
+        }
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choice = (root["choices"] as? [[String: Any]])?.first,
               let message = choice["message"] as? [String: Any],
@@ -252,7 +262,10 @@ struct OpenAIClient: LLMClient {
             "messages": [["role": "system", "content": system]]
                 + messages.map { ["role": $0.role.rawValue, "content": $0.text] },
         ]
-        if stream { body["stream"] = true }
+        if stream {
+            body["stream"] = true
+            body["stream_options"] = ["include_usage": true]      // so the usage meter gets counts
+        }
         if !tools.isEmpty {
             // Anthropic's tool shape → OpenAI's function shape.
             body["tools"] = tools.map { t -> [String: Any] in

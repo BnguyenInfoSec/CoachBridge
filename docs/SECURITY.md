@@ -188,7 +188,7 @@ find the evidence.
 | **PW.1 Design to meet requirements; threat modelling** | This document; data minimisation (FIT totals only, rounded location, no numbers on lock screens) | §1–§3 |
 | **PW.4 Reuse well-secured software** | One dependency; in-house parser for hostile input | `project.yml`, `FITParser.swift` |
 | **PW.5 Secure coding** | Input validation at trust boundaries; output encoding for prompts; least privilege (read-only Health, `drive.file`) | `PromptSafety.swift`, entitlements |
-| **PW.7 / PW.8 Review and test** | 353 unit tests including fuzzing, exhaustive sweeps and injection matrices; mutation checks that tests fail when a guard is removed; independent review of each change by a second model, calibrated against a planted defect | `CoachBridgeTests/`, [`SDLC.md`](SDLC.md) |
+| **PW.7 / PW.8 Review and test** | 360 unit tests including fuzzing, exhaustive sweeps and injection matrices; mutation checks that tests fail when a guard is removed; independent review of each change by a second model, calibrated against a planted defect | `CoachBridgeTests/`, [`SDLC.md`](SDLC.md) |
 | **RV.1 Identify vulnerabilities** | Findings fixed and explained one per commit (e.g. four prompt leaks found by the injection suite; hookless-rim rounding; export left in tmp) | `git log` |
 | **RV.2 / RV.3 Respond and fix root causes** | Each fix adds a test for the class of bug, not just the instance; SOP updated so it can't recur | `CLAUDE.md` §4a |
 

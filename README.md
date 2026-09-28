@@ -85,6 +85,9 @@ shallower wheels suggested when it's gusty.
 **Your fuel.** What you eat and drink for swim, bike and run, and how many carbs an hour your gut
 handles. Each session's fuelling names your own products.
 
+**Knows what it costs.** Every AI request's token counts are recorded on the phone (never the
+content) and shown per feature with an estimated price, to size a subscription from real usage.
+
 **Nothing shared without asking.** Before anything goes to your AI provider or Google Drive, the
 app says exactly what, where and when, and waits for your OK. Settings → Data sharing turns
 either off again.
@@ -172,7 +175,7 @@ generative-AI profile, and where the process is weak.
 ```mermaid
 flowchart LR
     O["Owner<br/>requirements · decisions"] --> C["Claude Code<br/>implements · tests"]
-    C --> T{"353 tests<br/>simulator check"}
+    C --> T{"360 tests<br/>simulator check"}
     T --> X["Codex<br/>independent review<br/>diff only · read-only"]
     X --> C
     T --> G{"pre-commit hook<br/>injection SOP"}
@@ -320,7 +323,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 353 tests and runs in about four seconds. It covers the data contract, the plan engine
+The suite has 360 tests and runs in about four seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
@@ -354,7 +357,7 @@ git config core.hooksPath tools/githooks
 
 ## Project status
 
-Personal project in active development, currently **v2.13.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.14.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the

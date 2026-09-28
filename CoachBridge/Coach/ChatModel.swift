@@ -173,8 +173,11 @@ final class ChatModel: ObservableObject {
                 }
                 self.smoother = smoother
 
-                for try await event in client.stream(system: system, messages: context,
-                                                     tools: canEdit ? [PlanChangeTool.schema] : []) {
+                // Labelled for the usage meter; the stream's own task inherits the label.
+                let events = UsageContext.$feature.withValue(.chat) {
+                    client.stream(system: system, messages: context, tools: canEdit ? [PlanChangeTool.schema] : [])
+                }
+                for try await event in events {
                     switch event {
                     case .text(let chunk):
                         smoother.push(chunk)

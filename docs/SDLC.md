@@ -69,7 +69,7 @@ notification says, and a test checks that no sport's text ever contains a digit.
 
 ### Test: every claim has a test
 
-The suite (353 tests, about four seconds) runs on every change. Beyond ordinary unit tests, it
+The suite (360 tests, about four seconds) runs on every change. Beyond ordinary unit tests, it
 includes:
 
 - an **injection matrix**: 14 payloads through every text field in every prompt;

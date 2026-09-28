@@ -1,6 +1,6 @@
 # Coach Bridge privacy policy
 
-*Draft, last updated 2026-09-28. It describes what version 2.13 of the app does and must be
+*Draft, last updated 2026-09-28. It describes what version 2.14 of the app does and must be
 reviewed before it is published for TestFlight or App Store users. It is not legal advice.*
 
 Coach Bridge is a training app for iPhone and Apple Watch. It is built so that your data stays on
@@ -28,7 +28,8 @@ analytics and no advertising.
 On your iPhone and Apple Watch, in the app's private storage, encrypted by iOS. The app's records
 (sessions, chats, workout notes, imported workouts) are unreadable while your device is locked;
 settings and your training profile are protected until you first unlock after a restart. Nothing
-is stored in iCloud. API keys are kept in the iPhone's Keychain, on that device only. The Watch
+is stored in iCloud. The app also keeps a count of each AI request it makes (which feature, which model, and how
+many tokens went each way, never what was said) so it can show you what the coach costs. API keys are kept in the iPhone's Keychain, on that device only. The Watch
 holds a copy of your upcoming sessions and recovery summary; its watch face complications keep only
 the next session and the race countdown, never health values. The same rule holds for the iPhone
 widget and Live Activities, which can appear on the Lock Screen: they show today's session and a

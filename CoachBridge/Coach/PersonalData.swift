@@ -108,6 +108,7 @@ enum PersonalData {
             try? fm.removeItem(at: url)
         }
         if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: id) }
+        s.usage.deleteAll()                                            // the in-memory copy too
         log.info("Deleted all app data")
     }
 }

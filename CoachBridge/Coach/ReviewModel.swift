@@ -130,7 +130,9 @@ final class ReviewModel: ObservableObject {
             recentFeel: journal.effortSummary())
 
         do {
-            let data = try await client.runTool(system: system, user: user, tool: WorkoutReviewer.tool)
+            let data = try await UsageContext.$feature.withValue(.note) {
+                try await client.runTool(system: system, user: user, tool: WorkoutReviewer.tool)
+            }
             guard let note = WorkoutReviewer.parse(data, model: model) else {
                 errorText = "The coach's reply didn't come back in a form the app could read. Try again."
                 return

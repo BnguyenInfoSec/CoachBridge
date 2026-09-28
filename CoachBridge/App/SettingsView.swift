@@ -7,6 +7,8 @@ struct SettingsView: View {
     @EnvironmentObject private var plan: PlanModel
     @EnvironmentObject private var weather: WeatherModel
     @EnvironmentObject private var prompter: FeelPrompter
+    @ObservedObject private var usage = AppServices.shared.usage
+    @State private var usagePeriod = UsagePeriod.month
     @AppStorage(FeelPrompter.enabledKey) private var feelReminders = false
 
     @AppStorage(AppSettings.modelKey) private var model = AppSettings.defaultModel
@@ -44,6 +46,68 @@ struct SettingsView: View {
     @State private var deleted = false
 
     private var provider: LLMProvider { LLMProvider(rawValue: providerRaw) ?? .anthropic }
+
+    enum UsagePeriod: String, CaseIterable, Identifiable {
+        case month = "This month", thirty = "30 days", year = "13 months"
+        var id: String { rawValue }
+        var start: Date {
+            let cal = Calendar.current
+            switch self {
+            case .month: return cal.dateInterval(of: .month, for: .now)?.start ?? .now
+            case .thirty: return cal.date(byAdding: .day, value: -30, to: .now) ?? .now
+            case .year: return cal.date(byAdding: .month, value: -13, to: .now) ?? .now
+            }
+        }
+    }
+
+    /// What the coach has cost, measured on this iPhone, to price a subscription with real
+    /// numbers. Counts only: nothing here says what was asked or answered.
+    private var usageSection: some View {
+        let sum = usage.summary(from: usagePeriod.start)
+        return Section {
+            Picker("Period", selection: $usagePeriod) {
+                ForEach(UsagePeriod.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            if sum.calls == 0 {
+                Text("No AI calls yet in this period.").foregroundStyle(.secondary)
+            } else {
+                LabeledContent("Estimated cost", value: UsageSummary.dollars(sum.cost))
+                    .font(.headline)
+                LabeledContent("Calls", value: "\(sum.calls)")
+                LabeledContent("Tokens", value: "\(sum.tokens.input.formatted()) in · \(sum.tokens.output.formatted()) out")
+                ForEach(sum.lines) { l in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(l.feature.label)
+                            Spacer()
+                            Text(UsageSummary.dollars(l.cost)).monospacedDigit()
+                        }
+                        Text("\(l.calls) calls · \(l.tokens.input.formatted()) in · \(l.tokens.output.formatted()) out")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                ShareLink(item: sum.shareText(period: usagePeriod.rawValue.lowercased())) {
+                    Label("Share these numbers", systemImage: "square.and.arrow.up")
+                }
+            }
+        } header: {
+            Text("AI usage")
+        } footer: {
+            Text(usageFooter(sum))
+        }
+    }
+
+    private func usageFooter(_ sum: UsageSummary) -> String {
+        let prices = sum.models.compactMap { m in
+            UsagePricing.price(model: m).map { "\(m): $\($0.input.formatted()) in / $\($0.output.formatted()) out per million tokens (\($0.basis))" }
+        }
+        var text = "Counted on this iPhone from what the provider reports for each call. The cost is an estimate at list prices; your provider's console has the real bill."
+        if !prices.isEmpty { text += " Assumed: " + prices.joined(separator: "; ") + "." }
+        if sum.unpriced > 0 { text += " \(sum.unpriced) calls on a model with no known price aren't in the estimate." }
+        text += " Sharing sends only these counts and dollars, nothing about your training."
+        return text
+    }
 
     /// Shows who would receive the data, and turns sharing on (through the same explanation
     /// the app shows the first time) or off.
@@ -282,6 +346,8 @@ struct SettingsView: View {
                 } footer: {
                     Text("Nothing leaves this iPhone for your AI provider or your Drive until you allow it here or when the app first asks. Turning one off stops it from then on; what was already sent stays with the provider or in your Drive. Switching AI provider asks again.")
                 }
+
+                usageSection
 
                 Section {
                     Button {
