@@ -85,3 +85,24 @@ codex exec --skip-git-repo-check --ephemeral --sandbox read-only --color never \
     exit 3
 }
 cat "$work/review.md"
+
+# The record: one row per review in docs/review-log.md, committed with the change it reviewed,
+# so the review is visible in the repository rather than only in a terminal.
+log="$root/docs/review-log.md"
+if [ ! -f "$log" ]; then
+    cat > "$log" <<'HEAD'
+# Second-opinion review log
+
+Every run of `tools/second-opinion.sh` adds a row: what was reviewed, by which Codex version, and
+the result. Findings are checked against the code and tests before anything changes; see
+[`SDLC.md`](SDLC.md). "No findings" means the reviewer found nothing, not that there is nothing.
+
+| Date | Reviewed | Size | Codex | Result |
+|---|---|---|---|---|
+HEAD
+fi
+result=$(grep -c -E '^[[:space:]]*[-*0-9].*\*\*(High|Medium|Low)' "$work/review.md" || true)
+if grep -qi '^no findings' "$work/review.md"; then verdict="No findings"; else verdict="${result:-?} finding(s)"; fi
+version=$(codex --version 2>/dev/null | awk '{print $NF}')
+printf '| %s | %s | %s bytes | %s | %s |\n' "$(date '+%Y-%m-%d %H:%M')" "$what" "$bytes" "${version:-?}" "$verdict" >> "$log"
+echo "second-opinion: logged in docs/review-log.md" >&2
