@@ -96,3 +96,20 @@ final class FITImportTests: XCTestCase {
         XCTAssertNil(detail)
     }
 }
+
+@MainActor
+final class FITPruneTests: XCTestCase {
+    func testOldImportsArePrunedRecentOnesKept() throws {
+        let store = FITWorkoutStore()
+        store.deleteAll()
+        defer { store.deleteAll() }
+        var w = FITWriter()
+        w.message(local: 0, global: 0, [(0, .u8(4))])
+        w.message(local: 1, global: 18, [(2, .u32(UInt32(1_789_887_600 - 631_065_600))), (7, .u32(3_600_000)), (5, .u8(1))])
+        try store.importFile(w.file(), now: Date(timeIntervalSince1970: 1_790_000_000))
+        store.prune(before: Date(timeIntervalSince1970: 1_700_000_000))
+        XCTAssertEqual(store.workouts.count, 1, "recent import kept")
+        store.prune(before: Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertTrue(store.workouts.isEmpty, "older than the cut-off, pruned")
+    }
+}

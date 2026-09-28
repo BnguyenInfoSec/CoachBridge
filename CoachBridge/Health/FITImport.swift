@@ -89,6 +89,14 @@ final class FITWorkoutStore: ObservableObject {
         persist()
     }
 
+    /// Keeps two years — enough for training load and projections — so the file can't grow
+    /// without bound. Called at launch.
+    func prune(before date: Date) {
+        let before = workouts.count
+        workouts.removeAll { $0.start < date }
+        if workouts.count != before { persist() }
+    }
+
     func deleteAll() {
         workouts = []
         try? FileManager.default.removeItem(at: Self.url)
