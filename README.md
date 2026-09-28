@@ -120,7 +120,8 @@ Feel ratings come back as queued messages that the phone validates before saving
 
 **Data sources.** Everything the app reads comes through the `HealthSource` protocol.
 `CombinedSource` merges Apple Health with imported FIT workouts through `WorkoutReconciler`, so
-the same session from two sources counts once. Each workout records its origin, and HRV is labelled
+the same session from two sources counts once, then joins back-to-back pieces of one outing (run/walk
+intervals saved as separate workouts) through `WorkoutSegments`. Each workout records its origin, and HRV is labelled
 with its method (Apple's SDNN isn't comparable with the RMSSD other devices report).
 
 **Plan pipeline.**
@@ -135,6 +136,41 @@ AthleteProfile → PlanBlueprint → PlanEngine → Prescriber → PlanModel
 **LLM access.** The `LLMClient` protocol has two operations, streaming chat and forced tool
 calls. Anthropic is the primary provider; an OpenAI client and a hosted-server client share the
 same interface. Each provider's API key is stored separately in the Keychain.
+
+**The workout loop.** A finished workout reaches the app through a HealthKit observer.
+`FeelPrompter` asks how it felt, either as a sheet when the app opens or as a local notification
+that names the sport only. The answer goes to `ReviewModel`, which asks the coach for one note
+(`WorkoutReviewer`, a forced tool call validated before it's saved). The note appears on the
+workout in the plan. Every session also carries a purpose line from `SessionPurpose`, a pure
+function rather than a model call, so it costs nothing.
+
+```mermaid
+flowchart LR
+    H["Apple Health<br/>new workout"] --> F["FeelPrompter<br/>sheet on open · notification"]
+    F --> A["Athlete answers<br/>how it felt"]
+    A --> R["ReviewModel<br/>one request"]
+    R --> W["WorkoutReviewer<br/>PromptSafety in · validated out"]
+    W --> N["Coach's note<br/>in the plan"]
+```
+
+### How it's developed
+
+Claude Code writes and commits. OpenAI Codex reviews each change independently. The owner
+decides, tests on devices and approves anything irreversible. Tests and a pre-commit hook gate
+every commit. [`docs/SDLC.md`](docs/SDLC.md) describes the process: roles, the path each change
+takes, how output from AI tools is treated as untrusted, the mapping to NIST SSDF and its
+generative-AI profile, and where the process is weak.
+
+```mermaid
+flowchart LR
+    O["Owner<br/>requirements · decisions"] --> C["Claude Code<br/>implements · tests"]
+    C --> T{"332 tests<br/>simulator check"}
+    T --> X["Codex<br/>independent review<br/>diff only · read-only"]
+    X --> C
+    T --> G{"pre-commit hook<br/>injection SOP"}
+    G --> M["commit<br/>one change, one reason"]
+    M --> O
+```
 
 ## Privacy and security
 
@@ -197,6 +233,8 @@ Highlights:
   files, location rounded to about 1 km, nothing numeric on a locked screen, routes never stored.
 - **Verifiable.** Each claim in the security document names the test that proves it, and every
   fix is its own commit with the reason in the message.
+- **Two-model review.** Every non-trivial change is reviewed by a second model from a different
+  family, sandboxed and given only the diff. See [`docs/SDLC.md`](docs/SDLC.md).
 
 ## Getting started
 
@@ -341,6 +379,8 @@ would need explicit consent flows for the LLM and Drive features.
 | [`CHANGELOG.md`](CHANGELOG.md) | Development history: what changed in each version, and why |
 | [`docs/data-contract.md`](docs/data-contract.md) | The daily JSON export format (fixed; external consumers depend on it) |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security design: information flow, threat model, OWASP LLM Top 10, NIST SSDF |
+| [`docs/SDLC.md`](docs/SDLC.md) | How the app is built: AI implementer, independent AI reviewer, human owner, and the gates between them |
 | [`docs/coach-bridge-privacy-policy.md`](docs/coach-bridge-privacy-policy.md) | Draft privacy policy, written from what the app actually does |
 | [`AGENT-HANDOFF.md`](AGENT-HANDOFF.md) | In-depth architecture, invariants and project context for contributors |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed working rules for AI coding agents |
+| [`AGENTS.md`](AGENTS.md) | The reviewer's role and limits, read by Codex |
