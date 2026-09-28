@@ -96,6 +96,8 @@ enum PersonalData {
             Keychain.delete(account: account)
         }
         s.watchLink.wipeWatch()
+        PhoneGlancePublisher.clear()                                   // the widget's copy
+        await LiveSession.shared.endAllNow()                           // nothing left on the Lock Screen
 
         // Then the app's own files and settings.
         let fm = FileManager.default

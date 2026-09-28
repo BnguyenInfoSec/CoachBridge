@@ -28,7 +28,9 @@ On your iPhone and Apple Watch, in the app's private storage, encrypted by iOS. 
 settings and your training profile are protected until you first unlock after a restart. Nothing
 is stored in iCloud. API keys are kept in the iPhone's Keychain, on that device only. The Watch
 holds a copy of your upcoming sessions and recovery summary; its watch face complications keep only
-the next session and the race countdown, never health values.
+the next session and the race countdown, never health values. The same rule holds for the iPhone
+widget and Live Activities, which can appear on the Lock Screen: they show today's session and a
+one-word recommendation ("Go", "Go easy"), never a health number.
 
 ## Where it goes, and only when you choose
 

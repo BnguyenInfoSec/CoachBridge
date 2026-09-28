@@ -110,6 +110,14 @@ struct SessionDetailView: View {
                 }
             }
 
+            if shown.kind != .rest {
+                Section {
+                    LiveActivityButton(title: shown.title, attributes: LiveSession.attributes(for: shown))
+                } footer: {
+                    Text("Shows this session, a running clock and your fuel stops on the Lock Screen and in the Dynamic Island, and on your Watch's Smart Stack.")
+                }
+            }
+
             if let d = draft {
                 Section {
                     Button(d.replaces == nil ? "Delete session" : "Go back to the planned session", role: .destructive) {
@@ -215,6 +223,26 @@ struct SessionDetailView: View {
                 }
             }
         }
+    }
+}
+
+/// Start / end the Live Activity for a session or race.
+struct LiveActivityButton: View {
+    @ObservedObject private var live = LiveSession.shared
+    let title: String
+    let attributes: SessionActivityAttributes
+
+    var body: some View {
+        if live.isRunning(title: title) {
+            Button("End Live Activity", role: .destructive) { Task { await live.end() } }
+        } else {
+            Button {
+                Task { await live.start(attributes) }
+            } label: {
+                Label("Start Live Activity", systemImage: "livephoto")
+            }
+        }
+        if let e = live.errorText { Text(e).font(.footnote).foregroundStyle(.red) }
     }
 }
 

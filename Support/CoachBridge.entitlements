@@ -13,5 +13,10 @@
 	     Capabilities and App Services in the developer portal. -->
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
+	<!-- Shared with the widget extension, which reads only the no-health-numbers glance. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.$(BUNDLE_ID_PREFIX).CoachBridge</string>
+	</array>
 </dict>
 </plist>

@@ -27,6 +27,8 @@ final class WatchLink: NSObject, ObservableObject {
     /// Sends the latest snapshot. Cheap and idempotent: WatchConnectivity keeps only the newest
     /// application context and delivers it when the watch next wakes.
     func push() {
+        // The iPhone widget changes on exactly the same events, so it rides along here.
+        PhoneGlancePublisher.publish()
         guard let session, session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else {
             log.info("Watch push skipped: activated \(self.session?.activationState == .activated, privacy: .public), paired \(self.session?.isPaired ?? false, privacy: .public), installed \(self.session?.isWatchAppInstalled ?? false, privacy: .public)")
             return

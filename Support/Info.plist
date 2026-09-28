@@ -119,5 +119,11 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
+	<!-- A session or race in progress on the Lock Screen and in the Dynamic Island. -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<!-- App Group shared with the widget (read by GlanceStore / PhoneGlanceStore). -->
+	<key>CBAppGroup</key>
+	<string>group.$(BUNDLE_ID_PREFIX).CoachBridge</string>
 </dict>
 </plist>

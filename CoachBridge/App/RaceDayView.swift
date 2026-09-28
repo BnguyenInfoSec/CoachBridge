@@ -35,6 +35,12 @@ struct RaceDayView: View {
             }
 
             Section {
+                LiveActivityButton(title: plan.raceName, attributes: LiveSession.attributes(for: plan))
+            } footer: {
+                Text("Start it at the gun: race clock and fuel cadence on your Lock Screen, Dynamic Island and Watch.")
+            }
+
+            Section {
                 ForEach(plan.legs) { leg in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {

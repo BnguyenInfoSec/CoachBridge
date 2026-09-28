@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Shared with the complication, which reads only the no-health-data glance. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.$(BUNDLE_ID_PREFIX).CoachBridge</string>
+	</array>
+</dict>
+</plist>
