@@ -907,7 +907,8 @@ private struct DayDetail: View {
                 let slot = calendarSync.slot(for: day, index: i)
                 NavigationLink(value: PlanRoute.session(s, day.date, day.change, slot)) {
                     SessionCard(session: s, slot: slot, unplaced: calendarSync.isUnplaced(day, index: i),
-                                weather: slot.flatMap { weather.forecast?.at($0.start) })
+                                weather: slot.flatMap { weather.forecast?.at($0.start) },
+                                purpose: SessionPurpose.what(s))
                 }
                 .buttonStyle(.plain)
             }
@@ -939,6 +940,8 @@ private struct SessionCard: View {
     var slot: DateInterval? = nil
     var unplaced = false
     var weather: HourWeather? = nil
+    /// The coach's why, cut to three lines here; the session screen has all of it.
+    var purpose: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -946,6 +949,10 @@ private struct SessionCard: View {
                 SessionLine(session: session, slot: slot, unplaced: unplaced)
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+            if let purpose {
+                Text(purpose).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                    .multilineTextAlignment(.leading)
             }
             if let rx = session.rx {
                 if let hr = rx.heartRate ?? rx.power {

@@ -38,6 +38,10 @@ equipment and goal. The plan is counted backward from race day through recovery,
 taper phases, with recovery weeks built in. Phases appear throughout the calendar: in a season
 ribbon, as color bands across the month view, and as all-day banners in Apple Calendar.
 
+**Every session says why.** Each session explains what it does and what it builds ("we're doing
+this to build that"), and where it fits in the current block. It's written by the app, so it
+costs nothing.
+
 **Edit any session in place.** Every field of every session can be changed with a tap. Editing
 a planned session makes it yours: it stays where you put it, and the coach plans the rest of the
 week around it.
@@ -270,7 +274,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 327 tests and runs in about four seconds. It covers the data contract, the plan engine
+The suite has 332 tests and runs in about four seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.

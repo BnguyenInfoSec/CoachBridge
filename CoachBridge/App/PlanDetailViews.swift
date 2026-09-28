@@ -53,6 +53,14 @@ struct SessionDetailView: View {
                 }
             }
 
+            Section {
+                Text(SessionPurpose.text(for: shown, phaseID: engine.phase(for: date).id))
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                Label("Why this session", systemImage: "text.bubble")
+            }
+
             if shown.kind == .flex, draft == nil {
                 Section {
                     Button {

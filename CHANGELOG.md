@@ -912,3 +912,14 @@ swim now shows the pool, an optional run the run route, and so on.
 Settings shows whether Apple Weather works for this build, the App ID to enable in the developer
 portal, and a **Check now** button. After the bundle-ID change there was no other way to tell a
 missing portal switch from no forecast yet. The check asks about a fixed place, not yours.
+
+## Why this session
+Every session now says why it's there, in the coach's voice: what it does and what that builds
+("Easy zone 2 riding builds the aerobic engine…"), then where it fits in the block you're in.
+It's on each session's card in the plan and in full on the session screen. It's written by the
+app from the session's sport, effort and phase, not by the AI, so it's free, instant and the same
+every time you look.
+
+## Adding a workout replaces the optional one
+Adding your own workout to a day removes that day's optional sessions, instead of leaving
+"Optional easy run" next to the ride you just planned.
