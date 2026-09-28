@@ -84,6 +84,7 @@ enum PlanAdjuster {
           "What a good race day looks like to them: \(p.goal.trimmingCharacters(in: .whitespacesAndNewlines))\n")
         Equipment they have — never program a session needing anything else:
         \(p.equipmentList.isEmpty ? "nothing listed" : p.equipmentList.map { $0.label.lowercased() }.joined(separator: ", "))
+        \((p.gear?.coachLines ?? []).joined(separator: "\n"))
 
         Plan rules (follow them exactly):
         \(engine.lifeRules)

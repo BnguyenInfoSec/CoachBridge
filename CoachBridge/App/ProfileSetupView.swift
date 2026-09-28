@@ -216,12 +216,61 @@ struct ProfileSetupView: View {
                     }
                 }
             }
+            if draft.hasBike {
+                TextField("Your bike, e.g. Canyon Speedmax CF 8", text: gear(\.bike))
+                    .textInputAutocapitalization(.words)
+                TextField("Tires, e.g. GP5000 S TR, 28 mm", text: gear(\.tires))
+                Picker("Tire setup", selection: gear(\.tireSetup)) {
+                    Text("Not sure").tag(Gear.TireSetup?.none)
+                    ForEach(Gear.TireSetup.allCases) { Text($0.label).tag(Optional($0)) }
+                }
+            }
+            if draft.sports.contains(.run) {
+                ForEach(shoes) { $shoe in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Picker("Shoe type", selection: $shoe.category) {
+                            ForEach(Gear.ShoeCategory.allCases) { Text($0.label).tag($0) }
+                        }
+                        TextField("Model — \(shoe.category.example)", text: $shoe.model)
+                            .font(.subheadline)
+                    }
+                }
+                .onDelete { idx in
+                    var g = draft.gear ?? Gear()
+                    g.shoes.remove(atOffsets: idx)
+                    draft.gear = g
+                }
+                Menu {
+                    ForEach(Gear.ShoeCategory.allCases) { c in
+                        Button("\(c.label) (\(c.example.replacingOccurrences(of: "e.g. ", with: "")))") {
+                            var g = draft.gear ?? Gear()
+                            g.shoes.append(Gear.Shoe(category: c))
+                            draft.gear = g
+                        }
+                    }
+                } label: {
+                    Label("Add running shoes", systemImage: "shoe.fill")
+                }
+            }
         } header: {
             Text("What you've got")
         } footer: {
             Text(equipmentFooter)
         }
     }
+
+    /// A field of the athlete's gear, creating the gear record on first edit.
+    private func gear<T>(_ field: WritableKeyPath<Gear, T>) -> Binding<T> {
+        Binding {
+            (draft.gear ?? Gear())[keyPath: field]
+        } set: { value in
+            var g = draft.gear ?? Gear()
+            g[keyPath: field] = value
+            draft.gear = g
+        }
+    }
+
+    private var shoes: Binding<[Gear.Shoe]> { gear(\.shoes) }
 
     private var equipmentFooter: String {
         if draft.eventKind.isTriathlon && !draft.hasBike {
@@ -230,7 +279,7 @@ struct ProfileSetupView: View {
         if !draft.hasTrainer {
             return "The plan only programs what you can actually do. Tick an indoor trainer and rides can move inside when the weather or the light is against you."
         }
-        return "The plan only programs what you can actually do. A power meter turns ride targets into watts; a pool or open water is what makes swimming possible at all."
+        return "The plan only programs what you can actually do. A power meter turns ride targets into watts; a pool or open water is what makes swimming possible at all. Your bike, tires and shoes go to the coach, so it can say which pair suits a run or what to check before a wet descent."
     }
 
     private var daysSection: some View {

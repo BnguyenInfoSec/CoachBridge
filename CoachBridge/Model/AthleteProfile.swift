@@ -283,6 +283,10 @@ struct AthleteProfile: Codable, Equatable, Sendable {
 
     /// Kit and access. Replaces the three separate booleans this used to carry.
     var equipment: [String] = []
+    /// The specific bike, tires and shoes, for the coach. Optional: the profile decodes all or
+    /// nothing, and a load that fails falls back to an empty profile — so a new non-optional
+    /// field would silently wipe everyone's setup. Keep new fields optional.
+    var gear: Gear? = nil
 
     func has(_ e: Equipment) -> Bool { equipment.contains(e.rawValue) }
 
@@ -349,7 +353,9 @@ struct AthleteProfile: Codable, Equatable, Sendable {
     }
 
     func save(_ defaults: UserDefaults = .standard) {
-        if let data = try? JSONEncoder().encode(self) { defaults.set(data, forKey: Self.storageKey) }
+        var clean = self
+        clean.gear = gear.map { $0.sanitized() }.flatMap { $0.isEmpty ? nil : $0 }
+        if let data = try? JSONEncoder().encode(clean) { defaults.set(data, forKey: Self.storageKey) }
     }
 
     // MARK: Date helpers (no engine needed — the engine is built *from* this)
@@ -412,4 +418,97 @@ struct AthleteProfile: Codable, Equatable, Sendable {
                                  detail: "Fun run with friends — not training, not a race.", isRace: false)]
         return p
     }()
+}
+
+/// What the athlete rides and runs in, so the coach can talk about it: which shoes suit which
+/// session, what pressure to run, whether the tires are up to a wet descent.
+struct Gear: Codable, Equatable, Sendable {
+    enum TireSetup: String, Codable, CaseIterable, Identifiable, Sendable {
+        case clincher, tubeless, tubular
+        var id: String { rawValue }
+        var label: String { rawValue.capitalized }
+    }
+
+    enum ShoeCategory: String, Codable, CaseIterable, Identifiable, Sendable {
+        case superTrainer, maxCushion, dailyTrainer, carbonRacer, stability, trail
+
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .superTrainer: return "Super trainer"
+            case .maxCushion: return "Max cushion"
+            case .dailyTrainer: return "Daily trainer"
+            case .carbonRacer: return "Carbon racer"
+            case .stability: return "Stability"
+            case .trail: return "Trail"
+            }
+        }
+        /// An example, so the categories mean something to someone who doesn't follow shoe news.
+        var example: String {
+            switch self {
+            case .superTrainer: return "e.g. Adidas Evo SL, ASICS Superblast"
+            case .maxCushion: return "e.g. Hoka Bondi, ASICS Nimbus"
+            case .dailyTrainer: return "e.g. Nike Pegasus, Brooks Ghost"
+            case .carbonRacer: return "e.g. Nike Alphafly, Adidas Adios Pro"
+            case .stability: return "e.g. Brooks Adrenaline, ASICS Kayano"
+            case .trail: return "e.g. Hoka Speedgoat, Salomon Speedcross"
+            }
+        }
+    }
+
+    struct Shoe: Codable, Equatable, Identifiable, Sendable {
+        var id = UUID()
+        var category: ShoeCategory
+        var model: String = ""
+    }
+
+    var bike: String = ""
+    var tires: String = ""
+    var tireSetup: TireSetup? = nil
+    var shoes: [Shoe] = []
+
+    init(bike: String = "", tires: String = "", tireSetup: TireSetup? = nil, shoes: [Shoe] = []) {
+        self.bike = bike
+        self.tires = tires
+        self.tireSetup = tireSetup
+        self.shoes = shoes
+    }
+
+    /// Lenient: any field missing (an older save, a field added later) decodes to its default
+    /// instead of failing the whole profile.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bike = (try? c.decodeIfPresent(String.self, forKey: .bike)) ?? ""
+        tires = (try? c.decodeIfPresent(String.self, forKey: .tires)) ?? ""
+        tireSetup = try? c.decodeIfPresent(TireSetup.self, forKey: .tireSetup)
+        shoes = (try? c.decodeIfPresent([Shoe].self, forKey: .shoes)) ?? []
+    }
+
+    var isEmpty: Bool { bike.isEmpty && tires.isEmpty && tireSetup == nil && shoes.isEmpty }
+
+    /// Typed text is capped and cleaned: it goes into the coach's prompt.
+    func sanitized() -> Gear {
+        var g = self
+        g.bike = CustomSession.oneLine(bike, max: 80)
+        g.tires = CustomSession.oneLine(tires, max: 80)
+        g.shoes = shoes.prefix(8).map { var s = $0; s.model = CustomSession.oneLine(s.model, max: 60); return s }
+        return g
+    }
+
+    /// Lines for the coach, and the guidance that makes them useful.
+    var coachLines: [String] {
+        let g = sanitized()
+        var lines: [String] = []
+        if !g.bike.isEmpty { lines.append("Bike: \(g.bike).") }
+        if !g.tires.isEmpty || g.tireSetup != nil {
+            lines.append("Tires: " + [g.tires.isEmpty ? nil : g.tires, g.tireSetup.map { $0.label.lowercased() }]
+                .compactMap { $0 }.joined(separator: ", ") + ".")
+        }
+        if !g.shoes.isEmpty {
+            lines.append("Run shoes: " + g.shoes.map { $0.model.isEmpty ? $0.category.label.lowercased() : "\($0.category.label.lowercased()) (\($0.model))" }
+                .joined(separator: "; ") + ".")
+            lines.append("When it helps, say which of these shoes suits a run: cushioned pairs for easy and recovery miles, super trainers for long runs and tempo, carbon racers kept for race-pace work and race day.")
+        }
+        return lines
+    }
 }
