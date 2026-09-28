@@ -9,5 +9,9 @@
 	<array/>
 	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>
+	<!-- Apple Weather. Paid Developer Program only; also enable WeatherKit for the App ID under
+	     Capabilities and App Services in the developer portal. -->
+	<key>com.apple.developer.weatherkit</key>
+	<true/>
 </dict>
 </plist>

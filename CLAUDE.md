@@ -51,7 +51,10 @@ in the Xcode UI. `Config/Base.xcconfig` ends with `#include? "Secrets.xcconfig"`
 
 Deleting the app from the phone also wipes the Keychain. Replacing the build via Run does not.
 
-Do not add the WeatherKit entitlement on a free team — it breaks signing.
+The app has the WeatherKit entitlement (v2.10), which needs the paid team — a free Personal Team
+can't sign it. WeatherKit must also be enabled for the App ID under both Capabilities and App
+Services in the developer portal; until then forecasts fail with a setup message. Apple Weather is
+the only weather source, and its mark and data-sources link must show wherever its data does.
 
 ## 3. Architecture
 

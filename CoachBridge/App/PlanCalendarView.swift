@@ -848,7 +848,7 @@ private struct DayDetail: View {
 
             if let w = weather.day(day.date) {
                 WeatherCard(day: w, hot: weather.isHot(day.date), location: weather.locationName,
-                            source: weather.source, attribution: weather.attribution)
+                            attribution: weather.attribution)
             }
 
             let busy = calendarSync.busy(on: day.date)
@@ -1054,7 +1054,6 @@ struct WeatherCard: View {
     let day: DayWeather
     let hot: Bool
     let location: String
-    var source: WeatherModel.Source = .openMeteo
     var attribution: AppleWeather.Attribution? = nil
 
     var body: some View {
@@ -1073,17 +1072,18 @@ struct WeatherCard: View {
             if hot {
                 Text("Hot afternoon: sessions move to first light (the plan's ~90°F rule).").font(.caption)
             }
-            if source == .apple, let a = attribution {
-                HStack(spacing: 6) {
-                    Text(location).font(.caption2).foregroundStyle(.tertiary)
+            // Apple requires its mark and a link to the data sources wherever WeatherKit data shows.
+            HStack(spacing: 6) {
+                Text(location).font(.caption2).foregroundStyle(.tertiary)
+                if let a = attribution {
                     AsyncImage(url: scheme == .dark ? a.markDark : a.markLight) { img in
                         img.resizable().scaledToFit()
-                    } placeholder: { Text("Apple Weather").font(.caption2) }
+                    } placeholder: { Text("\u{F8FF} Weather").font(.caption2) }
                     .frame(height: 11)
                     Link("Data sources", destination: a.legal).font(.caption2)
+                } else {
+                    Text("\u{F8FF} Weather").font(.caption2).foregroundStyle(.tertiary)
                 }
-            } else {
-                Text("\(location) · Weather data by Open-Meteo.com").font(.caption2).foregroundStyle(.tertiary)
             }
         }
         .padding(12)

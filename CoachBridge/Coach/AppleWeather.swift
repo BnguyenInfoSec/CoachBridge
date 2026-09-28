@@ -1,8 +1,10 @@
 import CoreLocation
 import WeatherKit
 
-/// Apple Weather (WeatherKit). Needs the paid Developer Program: the WeatherKit capability in
-/// Xcode plus the WeatherKit service on the App ID. Until then calls fail and the app uses Open-Meteo.
+/// Apple Weather (WeatherKit), the app's only weather source since v2.10. Needs the paid
+/// Developer Program: the entitlement (Support/CoachBridge.entitlements) plus WeatherKit enabled
+/// for the App ID under both Capabilities and App Services. Without those every call fails with
+/// a permission error, which the app reports as a setup problem.
 enum AppleWeather {
     struct Attribution: Sendable, Equatable {
         let markLight: URL
@@ -11,7 +13,7 @@ enum AppleWeather {
     }
 
     static func forecast(latitude: Double, longitude: Double, now: Date = .now) async throws -> CoachBridge.Forecast {
-        let location = CLLocation(latitude: latitude, longitude: longitude)
+        let location = CLLocation(latitude: WeatherPrivacy.rounded(latitude), longitude: WeatherPrivacy.rounded(longitude))
         let cal = Calendar.current
         let end = now.addingTimeInterval(8 * 86_400)
         let (hourly, daily) = try await WeatherService.shared.weather(
@@ -41,6 +43,13 @@ enum AppleWeather {
                 sunset: d.sun.sunset)
         }
         return CoachBridge.Forecast(fetchedAt: now, timeZone: cal.timeZone, days: days, hours: hours)
+    }
+
+    /// WeatherKit refuses a build that isn't entitled or whose App ID lacks the service. Worth
+    /// telling apart from "no network", because only one of them is fixed in the developer portal.
+    static func isSetupProblem(_ error: Error) -> Bool {
+        if let e = error as? WeatherError, case .permissionDenied = e { return true }
+        return String(describing: error).contains("WDSJWTAuthenticator")      // auth-token failure
     }
 
     /// Apple requires showing the Apple Weather mark and a link to its legal/data-sources page.

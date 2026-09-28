@@ -1,19 +1,18 @@
 import Foundation
 import os
 
-/// Forecast for the training location. Apple Weather (WeatherKit) when the app has it, otherwise
-/// Open-Meteo. Only the (rounded) coordinates leave the phone. Cached in memory for 30 minutes.
+/// Forecast for the training location, from Apple Weather (WeatherKit). Only the coordinates,
+/// rounded to about 1 km, leave the phone. Cached in memory for 30 minutes.
+///
+/// Until v2.10 this tried WeatherKit and fell back to Open-Meteo. The entitlement was never
+/// added, so every forecast came from Open-Meteo, and one failure switched Apple Weather off for
+/// the rest of the session. Now there's one source, and a setup problem is shown as one.
 @MainActor
 final class WeatherModel: ObservableObject {
 
-    enum Source: String { case apple = "Apple Weather", openMeteo = "Open-Meteo" }
-
     @Published private(set) var forecast: Forecast?
     @Published private(set) var errorText: String?
-    @Published private(set) var source: Source = .openMeteo
     @Published private(set) var attribution: AppleWeather.Attribution?
-    /// Set when WeatherKit isn't available to this build (free team / service not enabled yet).
-    private var appleUnavailable = false
     @Published var locationName: String { didSet { save() } }
     /// Nothing is fetched until the athlete says where they train. Without this the app used
     /// one person's city for everyone.
@@ -62,30 +61,15 @@ final class WeatherModel: ObservableObject {
         guard !inFlight else { return }
         inFlight = true
         defer { inFlight = false }
-        if !appleUnavailable {
-            do {
-                forecast = try await AppleWeather.forecast(latitude: latitude, longitude: longitude)
-                source = .apple
-                errorText = nil
-                if attribution == nil { attribution = try? await AppleWeather.attribution() }
-                log.info("Forecast from Apple Weather")
-                return
-            } catch {
-                appleUnavailable = true
-                log.info("Apple Weather unavailable, using Open-Meteo: \(error.localizedDescription, privacy: .public)")
-            }
-        }
         do {
-            var req = URLRequest(url: OpenMeteo.url(latitude: latitude, longitude: longitude))
-            req.timeoutInterval = 20
-            let (data, resp) = try await URLSession.shared.data(for: req)
-            guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw OpenMeteo.ParseError.unreadable }
-            forecast = try OpenMeteo.parse(data)
-            source = .openMeteo
+            forecast = try await AppleWeather.forecast(latitude: latitude, longitude: longitude)
             errorText = nil
+            if attribution == nil { attribution = try? await AppleWeather.attribution() }
             log.info("Forecast loaded: \(self.forecast?.days.count ?? 0, privacy: .public) days")
         } catch {
-            errorText = "Weather unavailable: \(error.localizedDescription)"
+            errorText = AppleWeather.isSetupProblem(error)
+                ? "Apple Weather isn't enabled for this app yet. In the Apple Developer portal, turn on WeatherKit for the App ID under both Capabilities and App Services, then rebuild."
+                : "Weather unavailable: \(error.localizedDescription)"
             log.error("Forecast failed: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -96,8 +80,8 @@ final class WeatherModel: ObservableObject {
     func useCurrentLocation() async {
         do {
             let loc = try await locator.current()
-            latitude = (loc.coordinate.latitude * 100).rounded() / 100
-            longitude = (loc.coordinate.longitude * 100).rounded() / 100
+            latitude = WeatherPrivacy.rounded(loc.coordinate.latitude)
+            longitude = WeatherPrivacy.rounded(loc.coordinate.longitude)
             locationName = await LocationProvider.placeName(for: loc) ?? "Current location"
             isConfigured = true
             UserDefaults.standard.set(true, forKey: "weather.configured")

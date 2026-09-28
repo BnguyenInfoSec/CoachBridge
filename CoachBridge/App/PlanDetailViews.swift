@@ -653,12 +653,12 @@ struct PlanSettingsView: View {
                         Button("Clear location", role: .destructive) { weather.clearLocation() }
                     }
                     if let err = weather.errorText { Text(err).font(.caption).foregroundStyle(.red) }
-                    LabeledContent("Source", value: weather.source.rawValue)
+                    LabeledContent("Source", value: "Apple Weather")
                 } header: {
                     Text("Weather location")
                 } footer: {
                     Text(weather.isConfigured
-                         ? "Apple Weather once WeatherKit is enabled on your developer account; otherwise Open-Meteo.com (free, no account). Only these coordinates, rounded to about 1 km, are sent. \"Use my current location\" asks for your approximate position once; it isn't tracked."
+                         ? "Forecasts come from Apple Weather. Only these coordinates, rounded to about 1 km, are sent. \"Use my current location\" asks for your approximate position once; it isn't tracked."
                          : "No location set, so no forecast and no heat warnings. Tap \"Use my current location\", or type coordinates and confirm them.")
                 }
 

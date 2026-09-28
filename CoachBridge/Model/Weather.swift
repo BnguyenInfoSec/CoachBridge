@@ -74,82 +74,10 @@ struct Forecast: Sendable {
     }
 }
 
-/// Open-Meteo (open-meteo.com): free for non-commercial use, no API key. Attribution: CC BY 4.0.
-enum OpenMeteo {
-    static func url(latitude: Double, longitude: Double, days: Int = 8) -> URL {
-        var c = URLComponents(string: "https://api.open-meteo.com/v1/forecast")!
-        c.queryItems = [
-            URLQueryItem(name: "latitude", value: String(format: "%.2f", latitude)),
-            URLQueryItem(name: "longitude", value: String(format: "%.2f", longitude)),
-            URLQueryItem(name: "hourly", value: "temperature_2m,apparent_temperature,precipitation_probability,wind_speed_10m,wind_gusts_10m,uv_index"),
-            URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset"),
-            URLQueryItem(name: "temperature_unit", value: "fahrenheit"),
-            URLQueryItem(name: "wind_speed_unit", value: "mph"),
-            URLQueryItem(name: "timezone", value: "auto"),
-            URLQueryItem(name: "forecast_days", value: String(days)),
-        ]
-        return c.url!
-    }
-
-    private struct Response: Decodable {
-        struct Hourly: Decodable {
-            let time: [String]
-            let temperature_2m: [Double?]
-            let apparent_temperature: [Double?]
-            let precipitation_probability: [Double?]
-            let wind_speed_10m: [Double?]
-            let wind_gusts_10m: [Double?]
-            let uv_index: [Double?]
-        }
-        struct Daily: Decodable {
-            let time: [String]
-            let temperature_2m_max: [Double?]
-            let temperature_2m_min: [Double?]
-            let precipitation_probability_max: [Double?]
-            let sunrise: [String]
-            let sunset: [String]
-        }
-        let timezone: String?
-        let hourly: Hourly
-        let daily: Daily
-    }
-
-    enum ParseError: LocalizedError {
-        case unreadable
-        var errorDescription: String? { "Couldn't read the weather forecast." }
-    }
-
-    static func parse(_ data: Data, now: Date = .now) throws -> Forecast {
-        guard let r = try? JSONDecoder().decode(Response.self, from: data) else { throw ParseError.unreadable }
-        let tz = r.timezone.flatMap(TimeZone.init(identifier:)) ?? .current
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = tz
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm"
-
-        let h = r.hourly
-        var hours: [HourWeather] = []
-        for i in h.time.indices {
-            guard let t = f.date(from: h.time[i]),
-                  let temp = h.temperature_2m[safe: i] ?? nil else { continue }
-            hours.append(HourWeather(time: t, tempF: temp,
-                                     feelsF: (h.apparent_temperature[safe: i] ?? nil) ?? temp,
-                                     precipProb: (h.precipitation_probability[safe: i] ?? nil) ?? 0,
-                                     windMph: (h.wind_speed_10m[safe: i] ?? nil) ?? 0,
-                                     gustMph: (h.wind_gusts_10m[safe: i] ?? nil) ?? 0,
-                                     uv: (h.uv_index[safe: i] ?? nil) ?? 0))
-        }
-        let d = r.daily
-        var days: [String: DayWeather] = [:]
-        for i in d.time.indices {
-            guard let hi = d.temperature_2m_max[safe: i] ?? nil, let lo = d.temperature_2m_min[safe: i] ?? nil else { continue }
-            days[d.time[i]] = DayWeather(iso: d.time[i], highF: hi, lowF: lo,
-                                         precipProbMax: (d.precipitation_probability_max[safe: i] ?? nil) ?? 0,
-                                         sunrise: d.sunrise[safe: i].flatMap { f.date(from: $0) },
-                                         sunset: d.sunset[safe: i].flatMap { f.date(from: $0) })
-        }
-        return Forecast(fetchedAt: now, timeZone: tz, days: days, hours: hours)
-    }
+/// The only location a weather request carries: the training spot rounded to two decimals
+/// (about 1 km), whether it came from the phone's position or was typed in by hand.
+enum WeatherPrivacy {
+    static func rounded(_ degrees: Double) -> Double { (degrees * 100).rounded() / 100 }
 }
 
 extension Array {

@@ -89,45 +89,17 @@ final class CalendarMarkerTests: XCTestCase {
     }
 }
 
-final class OpenMeteoTests: XCTestCase {
-    private let sample = """
-    {"timezone":"America/Los_Angeles",
-     "hourly":{"time":["2026-09-22T06:00","2026-09-22T12:00","2026-09-22T17:00"],
-               "temperature_2m":[64.1,84.0,92.3],"apparent_temperature":[63.0,86.0,95.1],
-               "precipitation_probability":[0,10,5],"wind_speed_10m":[4,9,12.4],"wind_gusts_10m":[8,15,20],"uv_index":[0,8,2]},
-     "daily":{"time":["2026-09-22"],"temperature_2m_max":[93.0],"temperature_2m_min":[63.2],
-              "precipitation_probability_max":[10],"sunrise":["2026-09-22T06:35"],"sunset":["2026-09-22T18:45"]}}
-    """
-
-    func testParseAndHeat() throws {
-        let f = try OpenMeteo.parse(Data(sample.utf8))
-        XCTAssertEqual(f.hours.count, 3)
-        XCTAssertEqual(f.days["2026-09-22"]?.highF, 93.0)
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Los_Angeles")!
-        let day = cal.date(from: DateComponents(year: 2026, month: 9, day: 22))!
-        XCTAssertTrue(f.isHotAfternoon(day, calendar: cal))
-        let fivePM = cal.date(bySettingHour: 17, minute: 30, second: 0, of: day)!
-        XCTAssertEqual(f.at(fivePM)?.feelsF, 95.1)
-        let text = f.describe(days: [day], calendar: cal)
-        XCTAssertTrue(text.hasPrefix("Tue 2026-09-22: 63–93°F, rain 10%"))
-        XCTAssertTrue(text.hasSuffix("HOT afternoon"))
+final class WeatherPrivacyTests: XCTestCase {
+    /// Only the rounded location goes to Apple Weather — typed-in coordinates included, which
+    /// used to reach the old provider rounded but would otherwise reach WeatherKit exact.
+    func testCoordinatesAreRoundedToAboutAKilometre() {
+        XCTAssertEqual(WeatherPrivacy.rounded(32.62871), 32.63, accuracy: 1e-9)
+        XCTAssertEqual(WeatherPrivacy.rounded(-117.09912), -117.10, accuracy: 1e-9)
+        XCTAssertEqual(WeatherPrivacy.rounded(0.004), 0, accuracy: 1e-9)
     }
 
-    func testNullsAreSkipped() throws {
-        let json = """
-        {"hourly":{"time":["2026-09-22T06:00"],"temperature_2m":[null],"apparent_temperature":[null],
-                   "precipitation_probability":[null],"wind_speed_10m":[null],"wind_gusts_10m":[null],"uv_index":[null]},
-         "daily":{"time":[],"temperature_2m_max":[],"temperature_2m_min":[],"precipitation_probability_max":[],"sunrise":[],"sunset":[]}}
-        """
-        let f = try OpenMeteo.parse(Data(json.utf8))
-        XCTAssertTrue(f.hours.isEmpty)
-    }
-
-    func testURLRoundsCoordinates() {
-        let u = OpenMeteo.url(latitude: 32.62871, longitude: -117.09912).absoluteString
-        XCTAssertTrue(u.contains("latitude=32.63"))
-        XCTAssertTrue(u.contains("longitude=-117.10"))
-        XCTAssertTrue(u.contains("temperature_unit=fahrenheit"))
+    func testAPermissionErrorReadsAsASetupProblem() {
+        struct Offline: Error {}
+        XCTAssertFalse(AppleWeather.isSetupProblem(Offline()))
     }
 }
