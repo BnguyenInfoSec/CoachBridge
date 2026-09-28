@@ -72,5 +72,34 @@ enum BackgroundExport {
                 }
             }
         }
+        startWorkoutObserver(store: store)
+    }
+
+    /// New workouts, as soon as Health has them, for the "how did it feel?" notification.
+    /// HealthKit holds delivery while the phone is locked, so the ask lands after the first
+    /// unlock following the workout — the same limit the daily export has.
+    private static func startWorkoutObserver(store: HKHealthStore) {
+        let type = HKObjectType.workoutType()
+        let query = HKObserverQuery(sampleType: type, predicate: nil) { @Sendable _, completionHandler, error in
+            if let error {
+                Task { @MainActor in log.error("Workout observer error: \(error.localizedDescription, privacy: .public)") }
+                completionHandler()
+                return
+            }
+            Task { @MainActor in
+                await AppServices.shared.prompter.workoutsChanged()
+                completionHandler()
+            }
+        }
+        store.execute(query)
+        store.enableBackgroundDelivery(for: type, frequency: .immediate) { @Sendable ok, error in
+            Task { @MainActor in
+                if let error {
+                    log.error("Workout delivery failed: \(error.localizedDescription, privacy: .public)")
+                } else {
+                    log.info("Workout delivery enabled: \(ok, privacy: .public)")
+                }
+            }
+        }
     }
 }

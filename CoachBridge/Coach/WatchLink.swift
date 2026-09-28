@@ -140,9 +140,10 @@ final class WatchLink: NSObject, ObservableObject {
             return false
         }
         let feel = WorkoutFeel(rpe: report.rpe, mood: mood)
-        let first = s.review.save(feel: feel, for: workout, dateISO: s.plan.engine.iso(workout.start))
-        // Same rule as the phone: a changed answer invalidates the note written from the old one.
-        if !first { s.review.clearNote(for: workout.id) }
+        s.review.save(feel: feel, for: workout, dateISO: s.plan.engine.iso(workout.start))
+        s.prompter.answered(workout.id)
+        // A note written before this answer is kept and shown as out of date, with a button to
+        // update it. Rewriting it here would spend a request in the background.
         push()
         return true
     }

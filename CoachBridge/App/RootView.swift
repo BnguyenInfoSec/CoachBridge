@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var health: HealthAuthorizer
     @EnvironmentObject private var dashboard: DashboardModel
+    @EnvironmentObject private var prompter: FeelPrompter
+    @EnvironmentObject private var review: ReviewModel
     @AppStorage(Appearance.key) private var appearance = Appearance.system.rawValue
     @AppStorage(OnboardingView.key) private var onboarded = 0
 
@@ -25,6 +27,15 @@ struct RootView: View {
         .minimizingTabBar()
         .preferredColorScheme(Appearance(rawValue: appearance)?.colorScheme)
         .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
+        // The Strava moment: open the app after a workout and it asks how it went.
+        .sheet(item: $prompter.pending) { w in
+            FeelSheet(workout: w, existing: review.feel(for: w.id)) { feel in
+                Task { await review.answer(feel, for: w) }
+            }
+        }
+        .onChange(of: dashboard.data?.generatedAt) { _, _ in
+            if !showOnboarding { prompter.offerOnOpen() }
+        }
         .task {
             // First run (or after a release that changes setup) gets the walkthrough, which
             // asks for Health itself. Otherwise ask straight away for anything new.

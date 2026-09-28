@@ -31,6 +31,52 @@ final class ReviewModel: ObservableObject {
         return first
     }
 
+    /// The note was written before the athlete said how the session felt (or before they changed
+    /// their answer), so it's reacting to numbers alone. Kept rather than deleted — it was paid
+    /// for — and offered for an update.
+    func isStale(_ id: UUID) -> Bool {
+        guard let note = note(for: id), let feel = feel(for: id) else { return false }
+        return note.createdAt < feel.answeredAt
+    }
+
+    /// The plan's session a recorded workout answers to: the same sport, on the same day.
+    static func plannedMatch(for w: WorkoutSummary, in sessions: [PlanSession]) -> PlanSession? {
+        sessions.first { s in
+            switch (s.kind, w.sport) {
+            case (.swim, .swim), (.bike, .bike), (.run, .run): return true
+            case (.lift, .other): return true
+            default: return false
+            }
+        }
+    }
+
+    /// Saves how a session felt and asks the coach to write — or rewrite — the note with it.
+    /// One request per answer, started by the athlete's own tap. Used by the sheet that opens
+    /// with the app, by a tapped notification and by the workout screen.
+    func answer(_ feel: WorkoutFeel, for workout: WorkoutSummary, detail: WorkoutDetail? = nil) async {
+        let s = AppServices.shared
+        let engine = s.plan.engine
+        let iso = engine.iso(workout.start)
+        save(feel: feel, for: workout, dateISO: iso)
+        s.prompter.answered(workout.id)
+        s.watchLink.push()                       // it's no longer waiting on the watch
+
+        var detail = detail
+        if detail == nil {
+            detail = try? await s.source.workoutDetail(workout, lthr: s.plan.settings.lthrBpm)
+        }
+        let planned = Self.plannedMatch(for: workout, in: s.plan.day(workout.start).sessions)
+        let compare = SessionCompare.make(
+            planned: planned, actualSeconds: workout.duration,
+            avgHR: workout.avgHR ?? detail.flatMap { Stats.mean($0.heartRate.map(\.value)) },
+            avgPower: detail?.avgPower)
+        await review(workout: workout, detail: detail, planned: planned, compare: compare, engine: engine,
+                     recovery: s.dashboard.data?.recovery,
+                     recentSameSport: (s.dashboard.data?.recent ?? []).filter { $0.sport == workout.sport && $0.id != workout.id },
+                     dateISO: iso,
+                     force: note(for: workout.id) != nil)
+    }
+
     /// Throws away the note so the next request writes a fresh one — used by "Ask again", and
     /// after the athlete changes how a session felt.
     func clearNote(for id: UUID) {

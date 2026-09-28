@@ -1,8 +1,9 @@
 import GoogleSignIn
 import SwiftUI
 import UIKit
+import UserNotifications
 
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // Both must happen before launch finishes, including background launches.
@@ -13,7 +14,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             // Before launch finishes too: a feel answered on the watch can be what woke the app.
             AppServices.shared.watchLink.activate()
         }
+        // Set before launch finishes, or a tap that launched the app is never delivered.
+        UNUserNotificationCenter.current().delegate = self
         return true
+    }
+
+    /// Tapping "How did your run feel?" opens the sheet for that workout.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard let raw = response.notification.request.content.userInfo["workoutID"] as? String,
+              let id = UUID(uuidString: raw) else { return }
+        await AppServices.shared.prompter.open(workoutID: id)
+    }
+
+    /// With the app open, the sheet asks instead; a banner on top of it would ask twice.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        notification.request.identifier.hasPrefix("feel.") ? [] : [.banner, .sound]
     }
 }
 
@@ -33,6 +49,7 @@ struct CoachBridgeApp: App {
     @StateObject private var watch = AppServices.shared.watch
     @StateObject private var venues = AppServices.shared.venues
     @StateObject private var review = AppServices.shared.review
+    @StateObject private var prompter = AppServices.shared.prompter
     @State private var fitMessage: String?
 
     var body: some Scene {
@@ -49,6 +66,7 @@ struct CoachBridgeApp: App {
                 .environmentObject(watch)
                 .environmentObject(venues)
                 .environmentObject(review)
+                .environmentObject(prompter)
                 .onOpenURL { url in
                     // A FIT file opened from Files or shared from a bike computer's app.
                     if url.isFileURL, url.pathExtension.lowercased() == "fit" {
@@ -71,6 +89,9 @@ struct CoachBridgeApp: App {
                 Task {
                     await dashboard.ensureLoaded()
                     AppServices.shared.watchLink.push()
+                    // Coming back to the app is when a just-finished workout gets asked about.
+                    prompter.offerOnOpen()
+                    await prompter.workoutsChanged()
                 }
             case .background:
                 BackgroundExport.scheduleRefresh()

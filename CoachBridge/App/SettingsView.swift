@@ -6,6 +6,8 @@ struct SettingsView: View {
     @EnvironmentObject private var dashboard: DashboardModel
     @EnvironmentObject private var plan: PlanModel
     @EnvironmentObject private var weather: WeatherModel
+    @EnvironmentObject private var prompter: FeelPrompter
+    @AppStorage(FeelPrompter.enabledKey) private var feelReminders = false
 
     @AppStorage(AppSettings.modelKey) private var model = AppSettings.defaultModel
     @AppStorage(AppSettings.profileKey) private var profile = AppSettings.defaultProfile
@@ -194,6 +196,32 @@ struct SettingsView: View {
                 } footer: {
                     Text("Bring in rides and runs from a Garmin, Wahoo, Hammerhead or other bike computer: import .fit files here, or open one in Coach Bridge from Files or the share sheet. Only each session's totals are kept — never the route — and a session that's also in Apple Health counts once.")
                 }
+
+                Section {
+                    Toggle("Ask after each workout", isOn: $feelReminders)
+                        .onChange(of: feelReminders) { _, on in
+                            Task {
+                                if on {
+                                    if await prompter.requestPermission() {
+                                        await prompter.workoutsChanged()
+                                    } else {
+                                        feelReminders = false
+                                    }
+                                } else {
+                                    prompter.cancelAll()
+                                }
+                            }
+                        }
+                    if prompter.permissionDenied {
+                        Text("Notifications are off for Coach Bridge. Turn them on in the iOS Settings app, under Notifications.")
+                            .font(.footnote).foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("Workout reminders")
+                } footer: {
+                    Text("A notification when Apple Health gets a new workout, asking how it felt, and one reminder three hours later if you haven't answered. It names the sport only \u{2014} no times, distances or heart rate, because it can show on a locked screen. It arrives after you first unlock your iPhone, since Health can't be read while it's locked. Opening the app after a workout asks either way.")
+                }
+                .task { await prompter.refreshPermissionState() }
 
                 Section {
                     // Built by hand: a Label inside LabeledContent made the row several hundred

@@ -20,6 +20,7 @@ final class AppServices {
     let watch: WatchScheduler
     let venues: VenueStore
     let review: ReviewModel
+    let prompter: FeelPrompter
     let watchLink: WatchLink
 
     private init() {
@@ -37,6 +38,7 @@ final class AppServices {
         watch = WatchScheduler()
         venues = VenueStore()
         review = ReviewModel()
+        prompter = FeelPrompter()
         watchLink = WatchLink()
         // The journal's prune existed but was never called, so it grew forever.
         let cal = Calendar.current

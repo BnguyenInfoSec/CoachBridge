@@ -734,6 +734,7 @@ private struct WeekList: View {
 
 private struct WeekDayRow: View {
     @EnvironmentObject private var calendarSync: CalendarSync
+    @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var weather: WeatherModel
     let day: DayPlan
     let isToday: Bool
@@ -769,6 +770,11 @@ private struct WeekDayRow: View {
                     ForEach(day.done) { w in
                         Label("\(w.name) · \(Fmt.minutes(w.duration))", systemImage: "checkmark.circle.fill")
                             .font(.caption).foregroundStyle(Palette.good)
+                        // The coach's one-line takeaway, so the week reads as what happened.
+                        if let note = review.note(for: w.id) {
+                            Label(note.headline, systemImage: "text.bubble")
+                                .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                        }
                     }
                 }
             }
@@ -968,6 +974,13 @@ private struct SessionCard: View {
 private struct WorkoutCard: View {
     @EnvironmentObject private var review: ReviewModel
     let w: WorkoutSummary
+    /// Open by default while the workout is fresh — that's when the note is news. Older ones
+    /// show the headline and open on a tap.
+    @State private var expanded: Bool?
+
+    private var isExpanded: Bool {
+        expanded ?? (Date.now.timeIntervalSince(w.start) < WorkoutFeel.askWindow)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1006,9 +1019,66 @@ private struct WorkoutCard: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(Palette.color(for: w.sport))
             }
+
+            if let note = review.note(for: w.id) {
+                noteView(note)
+            } else if review.isGenerating(w.id) {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("The coach is reading your session\u{2026}").font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(12)
         .glassSurface(radius: 14)
+        .animation(.snappy(duration: 0.25), value: isExpanded)
+    }
+
+    /// The coach's note in the bubble itself. A button inside the card's link, so tapping the
+    /// note opens and closes it and tapping anywhere else still opens the workout.
+    private func noteView(_ note: CoachNote) -> some View {
+        Button {
+            expanded = !isExpanded
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: "text.bubble.fill").font(.caption)
+                        .foregroundStyle(Palette.color(for: w.sport))
+                    Text(note.headline).font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 4)
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                if isExpanded {
+                    Text(note.body).font(.callout).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let goal = note.towardGoal {
+                        Label(goal, systemImage: "target").font(.caption).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                    if let watch = note.watchFor {
+                        Label(watch, systemImage: "exclamationmark.triangle.fill").font(.caption)
+                            .foregroundStyle(.orange).multilineTextAlignment(.leading)
+                    }
+                    if review.isGenerating(w.id) {
+                        Label("Rewriting with how it felt\u{2026}", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    } else if review.isStale(w.id) {
+                        Label("Written before you logged how it felt \u{2014} open to update", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.color(for: w.sport).opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(isExpanded ? "Collapses the coach's note" : "Shows the coach's note")
     }
 }
 

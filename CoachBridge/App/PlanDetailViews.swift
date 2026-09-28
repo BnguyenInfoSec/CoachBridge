@@ -402,11 +402,8 @@ struct WorkoutDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showFeel) {
             FeelSheet(workout: summary, existing: review.feel(for: summary.id)) { feel in
-                let first = review.save(feel: feel, for: summary, dateISO: plan.engine.iso(summary.start))
-                // Changing an earlier answer invalidates the note that was written from it.
-                if !first { review.clearNote(for: summary.id) }
-                AppServices.shared.watchLink.push()        // it's no longer waiting on the watch
-                Task { await askCoach(force: !first) }
+                // Writes the note, or rewrites one that was written without this answer.
+                Task { await review.answer(feel, for: summary, detail: detail) }
             }
         }
         .task {
@@ -432,6 +429,18 @@ struct WorkoutDetailView: View {
         Section {
             if let note = review.note(for: summary.id) {
                 CoachNoteCard(note: note, sport: summary.sport)
+                if review.isGenerating(summary.id) {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Rewriting with how it felt\u{2026}").foregroundStyle(.secondary)
+                    }
+                } else if review.isStale(summary.id) {
+                    Button {
+                        Task { await askCoach(force: true) }
+                    } label: {
+                        Label("Update with how it felt", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
                 Menu {
                     Button("Ask again") { Task { await askCoach(force: true) } }
                 } label: {
@@ -538,14 +547,7 @@ struct WorkoutDetailView: View {
 
     /// The planned session that day of the same sport, if any.
     private var plannedMatch: PlanSession? {
-        let day = plan.day(summary.start)
-        return day.sessions.first { s in
-            switch (s.kind, summary.sport) {
-            case (.swim, .swim), (.bike, .bike), (.run, .run): return true
-            case (.lift, .other): return true
-            default: return false
-            }
-        }
+        ReviewModel.plannedMatch(for: summary, in: plan.day(summary.start).sessions)
     }
 }
 
