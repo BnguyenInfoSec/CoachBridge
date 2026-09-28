@@ -494,3 +494,40 @@ final class BlueprintRangeTests: XCTestCase {
         for (_, r) in bp.hoursByPhase { XCTAssertLessThanOrEqual(r.lowerBound, r.upperBound) }
     }
 }
+
+final class PlanStartTests: XCTestCase {
+    /// The plan used to restart every day for real profiles: startDateISO was never set, so
+    /// "today" was always the start and week 0.
+    func testSettingUpPinsTheStart() {
+        var p = AthleteProfile()
+        p.eventKind = .half703
+        p.eventDateISO = "2027-04-12"
+        XCTAssertEqual(p.pinningStart(todayISO: "2026-09-28").startDateISO, "2026-09-28")
+    }
+
+    func testAnExistingStartIsNeverMoved() {
+        var p = AthleteProfile.ironmanCalifornia
+        p.startDateISO = "2026-09-13"
+        XCTAssertEqual(p.pinningStart(todayISO: "2026-12-01").startDateISO, "2026-09-13")
+    }
+
+    func testAnUnfinishedProfileStaysUnpinned() {
+        XCTAssertEqual(AthleteProfile().pinningStart(todayISO: "2026-09-28").startDateISO, "")
+    }
+
+    /// With the start pinned, the plan a week from now is the same plan: the week that was
+    /// week 3 is still week 3.
+    func testAPinnedPlanDoesntMoveAsDaysPass() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        var p = AthleteProfile.ironmanCalifornia
+        p.startDateISO = "2026-09-28"
+        let e = PlanEngine(profile: p, settings: PlanSettings(), calendar: cal)
+        let monday = e.monday(of: e.date("2026-10-19"))
+        let w = e.weekIndex(monday)
+        let later = PlanEngine(profile: p, settings: PlanSettings(), calendar: cal)   // built "a week later"
+        XCTAssertEqual(later.weekIndex(monday), w)
+        XCTAssertEqual(w, 3)
+        XCTAssertEqual(later.phases, e.phases)
+    }
+}

@@ -314,8 +314,20 @@ struct AthleteProfile: Codable, Equatable, Sendable {
 
     // MARK: Derived
 
+    /// Falls back to today only for a profile that isn't set up (and demo mode, whose sample plan
+    /// is meant to start today). A real profile has its start pinned by `pinningStart` — without
+    /// that, the plan restarted every day: today was always week 0, the volume ramp never rose and
+    /// recovery weeks slid forward forever.
     var startDate: String {
         startDateISO.isEmpty ? Self.iso(Date()) : startDateISO
+    }
+
+    /// The profile with its plan start fixed to `todayISO` if it's complete and has none yet.
+    func pinningStart(todayISO: String) -> AthleteProfile {
+        guard isComplete, startDateISO.isEmpty else { return self }
+        var p = self
+        p.startDateISO = todayISO
+        return p
     }
 
     /// The race date, or a sensible horizon when there isn't one.

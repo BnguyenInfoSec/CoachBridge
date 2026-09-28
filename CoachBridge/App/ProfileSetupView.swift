@@ -86,6 +86,9 @@ struct ProfileSetupView: View {
                     get: { AthleteProfile.date(draft.eventDateISO) },
                     set: { draft.eventDateISO = AthleteProfile.iso($0) }), displayedComponents: .date)
             }
+            DatePicker("Plan starts", selection: Binding(
+                get: { AthleteProfile.date(draft.startDate) },
+                set: { draft.startDateISO = AthleteProfile.iso($0) }), displayedComponents: .date)
             VStack(alignment: .leading, spacing: 4) {
                 Text("What would make this a good day?")
                     .font(.footnote).foregroundStyle(.secondary)

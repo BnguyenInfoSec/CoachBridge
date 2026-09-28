@@ -25,7 +25,7 @@ final class PlanModel: ObservableObject {
     /// Plan tab, the thing you most want to show, is empty.
     var profile: AthleteProfile {
         get { DemoData.isOn && !storedProfile.isComplete ? DemoData.profile : storedProfile }
-        set { storedProfile = newValue }
+        set { storedProfile = newValue.pinningStart(todayISO: AthleteProfile.iso(.now)) }
     }
     @Published var settings: PlanSettings { didSet { settings.save() } }
     @Published private(set) var update: PlanUpdate?
@@ -97,7 +97,9 @@ final class PlanModel: ObservableObject {
         // property has a value.
         let loaded = PlanSettings.load()
         settings = loaded
-        storedProfile = AthleteProfile.migrated(from: loaded)
+        // Installs from before v2.11 never recorded a start; pin it now so the plan stops
+        // restarting every day. Today is the best date there is.
+        storedProfile = AthleteProfile.migrated(from: loaded).pinningStart(todayISO: AthleteProfile.iso(.now))
         lastRequestAt = UserDefaults.standard.object(forKey: Self.lastRequestKey) as? Date
         update = Self.loadUpdate()
         pruneUpdate()
