@@ -33,7 +33,7 @@ regenerate. It's git-ignored.
 Everything through v2.7.0 was written without a Swift toolchain. v2.7.1 (2026-09-25) is the first
 version compiled and tested by an agent: the app built clean, the tests needed fixing, and two of the
 failing tests were real plan-engine bugs (CHANGELOG, v2.7.1). Build and all 164 tests were green then.
-Commit `90d2b22` is v2.7.0 exactly as delivered, for comparison.
+Commit `000afed` is v2.7.0 exactly as delivered, for comparison.
 
 Keep it green. Don't claim a task is done until `build` and `test` both pass, and commit one fix
 per commit with the reason in the message.

@@ -184,7 +184,7 @@ find the evidence.
 |---|---|---|
 | **PO.1 Security requirements** | Privacy and cost invariants written down before features | `CLAUDE.md` §4, `AGENT-HANDOFF.md` §4 |
 | **PO.3 Toolchains and automation** | Pre-commit hook runs the injection SOP; tests run on every change | `tools/githooks/pre-commit`, `tools/check-text-fields.sh` |
-| **PS.1 Protect the code** | Secrets kept out of git (`Secrets.xcconfig` ignored); baseline commit for comparison | `.gitignore`, commit `90d2b22` |
+| **PS.1 Protect the code** | Secrets kept out of git (`Secrets.xcconfig` ignored); baseline commit for comparison | `.gitignore`, commit `000afed` |
 | **PW.1 Design to meet requirements; threat modelling** | This document; data minimisation (FIT totals only, rounded location, no numbers on lock screens) | §1–§3 |
 | **PW.4 Reuse well-secured software** | One dependency; in-house parser for hostile input | `project.yml`, `FITParser.swift` |
 | **PW.5 Secure coding** | Input validation at trust boundaries; output encoding for prompts; least privilege (read-only Health, `drive.file`) | `PromptSafety.swift`, entitlements |
@@ -233,7 +233,7 @@ Stated plainly, because a security design that claims no gaps isn't one.
 | **Type** | Indirect prompt injection (OWASP LLM01), with model output trusted downstream (LLM05) |
 | **Component** | Weekly plan adjustment — `PlanAdjuster.userMessage`, calendar text from `Scheduler.describe` |
 | **Affected** | Every version that sent calendar titles to the plan adjuster, up to v2.10.0 |
-| **Fixed** | v2.11.0 — commits `182568c` (input handling) and `7936b73` (output handling) |
+| **Fixed** | v2.11.0 — commits `96b30da` (input handling) and `10cbb98` (output handling) |
 | **Found by** | Internal review during the v2.11 text-field injection audit |
 | **Severity** | Medium (self-assessed): no access to the device needed, impact limited to the training plan |
 

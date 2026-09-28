@@ -19,7 +19,7 @@ v2.7.1 was the first compile by an agent (Xcode 27). The app itself built clean,
 v2.6/v2.7 code everyone expected to break. The test suite didn't compile: four tests had fallen
 behind API changes. Once it did, three tests failed; one was stale, and two were real plan-engine
 bugs (the first recovery week out-loaded the week before it; the taper missed race day). All 164
-tests were green after that. The repo is now in git: commit `90d2b22` is v2.7.0 as delivered, and
+tests were green after that. The repo is now in git: commit `000afed` is v2.7.0 as delivered, and
 each fix after it is its own commit with the reason in the message.
 
 Keep it that way:

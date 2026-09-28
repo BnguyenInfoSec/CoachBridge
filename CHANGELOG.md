@@ -630,7 +630,7 @@ a hard week before your resting heart rate does.
 # v2.7.1 — compiled for the first time
 
 No new features. This is the first version an agent built and tested itself, on your Mac, instead of
-handing you a zip to compile. The project is now a git repo: commit `90d2b22` is v2.7.0 exactly as
+handing you a zip to compile. The project is now a git repo: commit `000afed` is v2.7.0 exactly as
 delivered, and every fix after it is one commit saying what was wrong and why, so you can see what
 was delivered versus what had to be repaired.
 
