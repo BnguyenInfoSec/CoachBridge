@@ -1,6 +1,6 @@
 # Coach Bridge privacy policy
 
-*Draft, last updated 2026-09-28. It describes what version 2.12 of the app does and must be
+*Draft, last updated 2026-09-28. It describes what version 2.13 of the app does and must be
 reviewed before it is published for TestFlight or App Store users. It is not legal advice.*
 
 Coach Bridge is a training app for iPhone and Apple Watch. It is built so that your data stays on

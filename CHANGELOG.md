@@ -923,3 +923,35 @@ every time you look.
 ## Adding a workout replaces the optional one
 Adding your own workout to a day removes that day's optional sessions, instead of leaving
 "Optional easy run" next to the ride you just planned.
+
+# v2.13 — consent, fuel, wheels, and deleting sessions
+
+## Nothing is shared until you say so
+The first time something would go to your AI provider or your Google Drive, the app now shows
+what would be shared, what never is, where it goes, when, and how to take it back, and waits for
+Allow or Don't allow. A yes covers one recipient: switching from Anthropic to OpenAI asks again.
+Settings has a **Data sharing** section to turn either on or off. Automatic Drive exports never
+ask in the background; without your OK they just don't run. This was the main thing standing
+between the app and an external TestFlight beta.
+
+## Fuel, by sport
+**Your training** has fuel sections for swim, bike and run: what you eat before, what you use
+during, and how many carbs an hour your gut handles, plus caffeine and anything to avoid. Sessions
+of an hour or more now name your products instead of the plan's defaults, and the coach suggests
+fuelling with what you actually use.
+
+## Wheelsets
+Add your wheels, with their use, rim depth (a disc counts as deepest), internal width and rim
+type. The coach knows them, and an outdoor ride with gusts of 20 mph or more suggests the
+shallower set.
+
+## Delete a planned session
+Any planned session, optional ones included, can be deleted from its screen. It comes off the
+day, your calendar and your Watch, the coach is told not to put it back, and the day has a
+**Restore** button. The weekly update also stopped showing the coach both a planned session and
+your edited copy of it.
+
+## Review
+Every Codex review now leaves a row in `docs/review-log.md`. Codex found a real race in the
+consent screen (two requests at once could leave one waiting forever), and then that the fix had
+no tests; both are fixed.

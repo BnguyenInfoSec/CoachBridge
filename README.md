@@ -77,9 +77,17 @@ on the dashboard and in what the coach sees, always labelled with how it was est
 race on your calendar, split into swim, bike, run and transitions from your own recent training,
 shown as a range and labelled with what it's based on.
 
-**Your bike, set up properly.** Groupset and gearing, tires and rims, and a tire-pressure
-calculator (weight, width, tubes or tubeless, hooked or hookless, surface) that fills in your
-pressures and shows the right one on every outdoor ride, eased for rain.
+**Your bike, set up properly.** Groupset and gearing, wheelsets, tires and rims, and a
+tire-pressure calculator (weight, width, tubes or tubeless, hooked or hookless, surface) that
+fills in your pressures and shows the right one on every outdoor ride, eased for rain, with the
+shallower wheels suggested when it's gusty.
+
+**Your fuel.** What you eat and drink for swim, bike and run, and how many carbs an hour your gut
+handles. Each session's fuelling names your own products.
+
+**Nothing shared without asking.** Before anything goes to your AI provider or Google Drive, the
+app says exactly what, where and when, and waits for your OK. Settings → Data sharing turns
+either off again.
 
 **Widgets and Live Activities.** A Today widget for the home and Lock Screen with your session and
 a go / no-go call from your recovery, and a Live Activity with a running clock and fuel cadence
@@ -164,7 +172,7 @@ generative-AI profile, and where the process is weak.
 ```mermaid
 flowchart LR
     O["Owner<br/>requirements · decisions"] --> C["Claude Code<br/>implements · tests"]
-    C --> T{"332 tests<br/>simulator check"}
+    C --> T{"353 tests<br/>simulator check"}
     T --> X["Codex<br/>independent review<br/>diff only · read-only"]
     X --> C
     T --> G{"pre-commit hook<br/>injection SOP"}
@@ -312,7 +320,7 @@ xcodebuild -scheme CoachBridge -destination 'generic/platform=iOS' CODE_SIGNING_
 xcodebuild -scheme CoachBridge -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-The suite has 332 tests and runs in about four seconds. It covers the data contract, the plan engine
+The suite has 353 tests and runs in about four seconds. It covers the data contract, the plan engine
 (swept across every runway from 4 to 208 weeks), scheduling, input sanitisation, phase display,
 demo-mode isolation using a fake `HealthSource`, the FIT parser (including fuzzing and truncation),
 source merging, training load, the Watch snapshot and its validation, and data export. Any installed iPhone simulator works.
@@ -346,7 +354,7 @@ git config core.hooksPath tools/githooks
 
 ## Project status
 
-Personal project in active development, currently **v2.12.0**. Distributed by direct Xcode install,
+Personal project in active development, currently **v2.13.0**. Distributed by direct Xcode install,
 with TestFlight planned.
 
 Verified on device: HealthKit reads, Drive export, background delivery, the dashboard, chat, the
@@ -384,3 +392,4 @@ would need explicit consent flows for the LLM and Drive features.
 | [`AGENT-HANDOFF.md`](AGENT-HANDOFF.md) | In-depth architecture, invariants and project context for contributors |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed working rules for AI coding agents |
 | [`AGENTS.md`](AGENTS.md) | The reviewer's role and limits, read by Codex |
+| [`docs/review-log.md`](docs/review-log.md) | Every independent Codex review: what, when, and the result |

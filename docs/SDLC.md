@@ -69,7 +69,7 @@ notification says, and a test checks that no sport's text ever contains a digit.
 
 ### Test: every claim has a test
 
-The suite (332 tests, about four seconds) runs on every change. Beyond ordinary unit tests, it
+The suite (353 tests, about four seconds) runs on every change. Beyond ordinary unit tests, it
 includes:
 
 - an **injection matrix**: 14 payloads through every text field in every prompt;
@@ -92,6 +92,11 @@ layout quirk on iOS 27.
 project's rules and reports findings with a severity, a location, a failure scenario and a fix.
 The implementer checks each finding against the code and tests: real ones are fixed, and
 dismissed ones are named with the reason.
+
+Every run is recorded in [`review-log.md`](review-log.md). The log shows the reviewer
+earning its place: on the consent screen it found a real race (two requests at once could leave
+one caller waiting forever) that the implementer had noticed and wrongly judged harmless, and on
+the fix it pointed out the new queue had no tests.
 
 A reviewer that always says "No findings" is useless, and so is one you can't tell apart from
 it. So the reviewer was **calibrated**: a deliberate violation (the workout's duration in a
