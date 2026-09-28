@@ -99,6 +99,7 @@ struct FeelSheet: View {
             }
             .screenBackground(Palette.color(for: workout.sport))
             .navigationTitle("Log how it went")
+            .keyboardDismissible()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

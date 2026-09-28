@@ -192,6 +192,7 @@ struct SettingsView: View {
             }
             .screenBackground(Palette.Tab.settings)
             .navigationTitle("Settings")
+            .keyboardDismissible()
             .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
             .sheet(item: $exportFile, onDismiss: {
                 // The export holds everything; don't leave a copy lying in tmp.

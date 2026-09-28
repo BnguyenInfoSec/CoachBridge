@@ -126,6 +126,7 @@ struct SessionDetailView: View {
         .venueBackground(session: shown, iso: draft?.date ?? engine.iso(date),
                          accent: Palette.color(for: shown.kind))
         .navigationTitle(shown.kind.label)
+        .keyboardDismissible()
         .navigationBarTitleDisplayMode(.inline)
         .modifier(WorkoutPreviewModifier(plan: preview, isPresented: $showPreview))
         .confirmationDialog("Remove your version of this session?", isPresented: $confirmDelete, titleVisibility: .visible) {

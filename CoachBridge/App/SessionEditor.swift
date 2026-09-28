@@ -142,6 +142,7 @@ struct AddSessionSheet: View {
                 }
             }
             .navigationTitle("Add session")
+            .keyboardDismissible()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

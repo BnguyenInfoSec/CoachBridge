@@ -34,6 +34,7 @@ struct ProfileSetupView: View {
         }
         .screenBackground(Palette.Tab.plan)
         .navigationTitle(isSetup ? "Set up your plan" : "Your training")
+        .keyboardDismissible()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isSetup {
@@ -468,6 +469,7 @@ private struct EventEditor: View {
                 TextField("Notes", text: $detail, axis: .vertical).lineLimit(2...5)
             }
             .navigationTitle("Race or event")
+            .keyboardDismissible()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
