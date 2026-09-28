@@ -23,10 +23,11 @@ struct DashboardView: View {
                         SetupPromptCard()
                     } else {
                         SeasonCard(engine: engine, today: today, training: dashboard.data?.recentTraining)
-                        RacesCard(profile: engine.profile, today: today, isoToday: engine.iso(today),
-                                  training: dashboard.data?.recentTraining)
                         ThisWeekCard(days: week, today: today)
                         UpNextCard(days: upcoming, today: today)
+                        if let training = dashboard.data?.recentTraining {
+                            ProjectionsCard(engine: engine, isoToday: engine.iso(today), training: training)
+                        }
                     }
                     if let d = dashboard.data {
                         if let load = d.load, !load.points.isEmpty { FitnessCard(load: load) }
@@ -132,10 +133,8 @@ private struct SeasonCard: View {
             }
             .accessibilityElement(children: .combine)
             if let pw = engine.phaseWeek(today) { PhaseChip(week: pw) }
+            // Shown in its own card below; used here so the race-day fuel follows it.
             let projection = training.flatMap { RaceProjection.make(event: engine.profile.eventKind, recent: $0) }
-            if let projection {
-                ProjectionRow(projection: projection)
-            }
             PhaseRibbon(engine: engine, date: today)
             Text(ph.focus).font(.subheadline).foregroundStyle(.secondary)
             if named, let race = RaceDayPlan.make(event: engine.profile.eventKind, raceName: engine.raceName,
@@ -152,60 +151,101 @@ private struct SeasonCard: View {
     }
 }
 
-/// "Projected finish 5:42 (5:25–6:00)", with how much of it came from your data.
-private struct ProjectionRow: View {
-    let projection: RaceProjection
+/// Projected finish times for every race on the calendar with a known distance, split by sport,
+/// so you can see which leg is costing time — and which legs are only typical times because
+/// there isn't enough recent training to go on.
+private struct ProjectionsCard: View {
+    let engine: PlanEngine
+    let isoToday: String
+    let training: [WorkoutSummary]
+
+    private struct Race: Identifiable {
+        let id: String
+        let name: String
+        let dateISO: String?
+        let kind: EventKind
+        let projection: RaceProjection
+    }
 
     var body: some View {
-        let r = projection.range
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("Projected finish").font(.subheadline).foregroundStyle(.secondary)
-                Text(RaceProjection.clock(projection.total)).font(.headline.monospacedDigit())
-                Text("(\(RaceProjection.clock(r.lowerBound))–\(RaceProjection.clock(r.upperBound)))")
-                    .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
-            }
-            if projection.legsFromData < projection.legs.count {
-                Text(projection.legsFromData == 0
-                     ? "Typical times — record a few more workouts to base this on your own."
-                     : "Partly typical times: \(projection.legs.count - projection.legsFromData) leg\(projection.legs.count - projection.legsFromData == 1 ? "" : "s") need more recent workouts.")
-                    .font(.caption).foregroundStyle(.secondary)
+        let p = engine.profile
+        let named = engine.blueprint.hasEvent || !p.eventName.isEmpty
+        var races: [Race] = []
+        if p.eventKind != .general, let proj = RaceProjection.make(event: p.eventKind, recent: training) {
+            races.append(Race(id: "goal", name: named ? engine.raceName : p.eventKind.label,
+                              dateISO: engine.blueprint.hasEvent ? engine.raceISO : nil, kind: p.eventKind, projection: proj))
+        }
+        let others = p.events.filter { $0.isRace && $0.dateISO >= isoToday }.sorted { $0.dateISO < $1.dateISO }
+        for e in others {
+            if let k = e.kind, let proj = RaceProjection.make(event: k, recent: training) {
+                races.append(Race(id: e.id.uuidString, name: e.title, dateISO: e.dateISO, kind: k, projection: proj))
             }
         }
-        .accessibilityElement(children: .combine)
-    }
-}
+        let missing = others.filter { $0.kind == nil }
 
-/// The other races on the calendar, each with a projected time where the distance is known.
-private struct RacesCard: View {
-    let profile: AthleteProfile
-    let today: Date
-    let isoToday: String
-    let training: [WorkoutSummary]?
-
-    var body: some View {
-        let races = profile.events.filter { $0.isRace && $0.dateISO >= isoToday }.sorted { $0.dateISO < $1.dateISO }
-        if !races.isEmpty {
-            Card("Your races", icon: "flag.2.crossed", tint: Palette.series7) {
-                ForEach(races) { race in
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(race.title).font(.subheadline.weight(.semibold))
-                            Text([AthleteProfile.date(race.dateISO).formatted(.dateTime.month(.abbreviated).day().year()),
-                                  race.kind?.label].compactMap { $0 }.joined(separator: " · "))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if let kind = race.kind, let training, let p = RaceProjection.make(event: kind, recent: training) {
-                            Text("~" + RaceProjection.clock(p.total)).font(.subheadline.monospacedDigit().weight(.semibold))
-                        } else if race.kind == nil {
-                            Text("Add a distance").font(.caption).foregroundStyle(.secondary)
+        return Group {
+            if !races.isEmpty || !missing.isEmpty {
+                Card("Projected times", icon: "stopwatch", tint: Palette.series7) {
+                    ForEach(races) { race in
+                        raceBlock(race)
+                        if race.id != races.last?.id || !missing.isEmpty { Divider() }
+                    }
+                    ForEach(missing) { e in
+                        HStack {
+                            Text(e.title).font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text("Add a distance in Your training").font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .accessibilityElement(children: .combine)
+                    Text("From your last eight weeks: median swim pace, your quicker rides, and your best run carried to race distance, slowed for running off the bike. \"Typical\" legs don't have enough recent workouts yet.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                Text("Projected from your last eight weeks of training. Set a race's distance in Your training to see its time.")
-                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func raceBlock(_ race: Race) -> some View {
+        let proj = race.projection
+        let r = proj.range
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(race.name).font(.subheadline.weight(.semibold))
+                    Text([race.dateISO.map { AthleteProfile.date($0).formatted(.dateTime.month(.abbreviated).day().year()) },
+                          race.kind.label].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(RaceProjection.clock(proj.total)).font(.title3.bold().monospacedDigit())
+                    Text("\(RaceProjection.clock(r.lowerBound))–\(RaceProjection.clock(r.upperBound))")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            ForEach(proj.legs) { leg in
+                HStack(spacing: 8) {
+                    Image(systemName: leg.sport.symbol)
+                        .foregroundStyle(Palette.color(for: leg.sport))
+                        .frame(width: 22)
+                    Text(leg.label).font(.subheadline)
+                    if leg.basis == .typical {
+                        Text("typical").font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(Color.secondary.opacity(0.15), in: Capsule())
+                    }
+                    Spacer()
+                    Text(RaceProjection.clock(leg.seconds)).font(.subheadline.monospacedDigit())
+                }
+                .accessibilityElement(children: .combine)
+            }
+            if proj.transitions > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.left.arrow.right").foregroundStyle(.secondary).frame(width: 22)
+                    Text("Transitions").font(.subheadline)
+                    Spacer()
+                    Text(RaceProjection.clock(proj.transitions)).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                }
             }
         }
     }
