@@ -66,6 +66,9 @@ final class WorkoutShapeTests: XCTestCase {
         XCTAssertNotNil(WatchScheduler.mapping(for: PlanSession(kind: .run, title: "Easy run")))
         XCTAssertNotNil(WatchScheduler.mapping(for: PlanSession(kind: .flex, title: "Optional easy spin")))
         XCTAssertNil(WatchScheduler.mapping(for: PlanSession(kind: .rest, title: "Off")))
-        XCTAssertNil(WatchScheduler.mapping(for: PlanSession(kind: .snow, title: "Snowboarding")))
+        XCTAssertNil(WatchScheduler.mapping(for: PlanSession(kind: .fun, title: "Race day")))
+        // Since v2.10 a snowboard day is a workout you can record: it goes to the Watch as an
+        // open-ended snowboarding workout, like golf.
+        XCTAssertEqual(WatchScheduler.mapping(for: PlanSession(kind: .snow, title: "Snowboarding"))?.0, .snowboarding)
     }
 }

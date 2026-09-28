@@ -39,3 +39,27 @@ final class GolfTests: XCTestCase {
         XCTAssertEqual(c.line(), "2026-10-03 07:30 · golf · Torrey Pines South · 270 min")
     }
 }
+
+final class SnowboardTests: XCTestCase {
+    func testSnowboardingIsntARunWhateverTheTitleSays() {
+        XCTAssertEqual(Prescriber.sport(of: PlanSession(kind: .snow, title: "Snowboard — a few runs")), .other)
+    }
+
+    func testSnowboardingGetsItsOwnPrescription() {
+        let rx = Prescriber(engine: PlanEngine()).prescription(for: PlanSession(kind: .snow, title: "Mammoth"), on: .now)
+        XCTAssertNil(rx?.heartRate)
+        XCTAssertTrue(rx?.intensity?.contains("descents") == true)
+    }
+
+    @MainActor
+    func testSnowboardingGoesToTheWatchOpenEnded() {
+        let s = PlanSession(kind: .snow, title: "Mammoth", rx: Prescription(durationMin: 300))
+        XCTAssertEqual(WatchScheduler.mapping(for: s)?.0, .snowboarding)
+        guard case .goal(let w)? = WatchScheduler.workout(for: s, fraction: 0.5) else { return XCTFail("expected a goal workout") }
+        XCTAssertEqual(w.goal, .open)
+    }
+
+    func testYouCanAddASnowboardDay() {
+        XCTAssertTrue(SessionFields.kinds.contains(.snow))
+    }
+}

@@ -107,7 +107,8 @@ final class WatchScheduler: ObservableObject {
             if t.contains("spin") || t.contains("ride") { return (.cycling, .outdoor) }
             return nil
         case .golf: return (.golf, .outdoor)
-        case .rest, .snow, .fun:
+        case .snow: return (.snowboarding, .outdoor)
+        case .rest, .fun:
             return nil
         }
     }
@@ -119,7 +120,7 @@ final class WatchScheduler: ObservableObject {
 
         // Golf: an open goal. A round takes as long as it takes, and a countdown to "done" would
         // go off on the 14th green.
-        if activity == .golf {
+        if activity == .golf || activity == .snowboarding {
             guard SingleGoalWorkout.supportsGoal(.open, activity: activity, location: location) else { return nil }
             return .goal(SingleGoalWorkout(activity: activity, location: location, goal: .open))
         }

@@ -21,6 +21,12 @@ struct Prescriber: Sendable {
     }
 
     func prescription(for s: PlanSession, on day: Date) -> Prescription? {
+        // Snowboarding: bursts on the way down, rest on the lift. Zones don't describe it.
+        if s.kind == .snow {
+            return Prescription(intensity: "Mixed: short hard efforts on the descents, easy on the lift. Counts as leg strength, not endurance",
+                                fuelDuring: "Eat before you're cold: a proper lunch, a snack mid-afternoon, water at every stop (altitude dries you out)",
+                                notes: "Quads take the load. Keep the next day's run or bike easy unless the legs feel fresh.")
+        }
         // Heart-rate zones and ride fuelling mean nothing on a golf course; say what does.
         if s.kind == .golf {
             return Prescription(intensity: "Easy: walking 18 holes is a few hours of low aerobic work; riding a cart isn't training",
@@ -68,8 +74,9 @@ struct Prescriber: Sendable {
         case .bike: return .bike
         case .run: return .run
         case .lift: return .lift
-        // Explicit, not guessed from the title: "Golf, riding the cart" would otherwise read as a bike.
-        case .golf: return .other
+        // Explicit, not guessed from the title: "Golf, riding the cart" would otherwise read as a
+        // bike, and "Snowboard — a few runs" as a run.
+        case .golf, .snow: return .other
         default:
             let t = s.title.lowercased()
             if t.contains("swim") { return .swim }
