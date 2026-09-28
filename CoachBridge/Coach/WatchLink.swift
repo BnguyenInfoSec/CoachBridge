@@ -84,7 +84,7 @@ final class WatchLink: NSObject, ObservableObject {
             .filter { now.timeIntervalSince($0.start) < WorkoutFeel.askWindow && $0.start <= now && !answered($0.id) }
             .sorted { $0.start > $1.start }
             .prefix(3)
-            .map { WatchSnapshot.Workout(id: $0.id, name: $0.name, symbol: symbol(for: $0.sport),
+            .map { WatchSnapshot.Workout(id: $0.id, name: $0.name, symbol: $0.icon,
                                          start: $0.start, minutes: Int($0.duration / 60)) }
 
         let pw = e.phaseWeek(today)
@@ -115,15 +115,6 @@ final class WatchLink: NSObject, ObservableObject {
             sessions: plan.needsSetup ? [] : sessions,
             awaitingFeel: Array(awaiting),
             race: race)
-    }
-
-    private static func symbol(for sport: Sport) -> String {
-        switch sport {
-        case .swim: return SessionKind.swim.symbol
-        case .bike: return SessionKind.bike.symbol
-        case .run: return SessionKind.run.symbol
-        default: return "figure.mixed.cardio"
-        }
     }
 
     // MARK: Feel answered on the watch

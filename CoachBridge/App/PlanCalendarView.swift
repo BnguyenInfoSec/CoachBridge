@@ -971,7 +971,7 @@ private struct WorkoutCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                Image(systemName: w.sport.symbol).foregroundStyle(Palette.color(for: w.sport)).frame(width: 28)
+                Image(systemName: w.icon).foregroundStyle(Palette.color(for: w.sport)).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(w.name).font(.subheadline.bold())
                     Text([w.start.formatted(date: .omitted, time: .shortened), Fmt.minutes(w.duration),

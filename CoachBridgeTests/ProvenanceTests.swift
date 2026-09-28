@@ -1,3 +1,4 @@
+import HealthKit
 import XCTest
 @testable import CoachBridge
 
@@ -80,5 +81,28 @@ final class ProvenanceTests: XCTestCase {
     func testOriginsAreRecorded() {
         XCTAssertTrue(DemoData.dashboard(now: t0).recent.allSatisfy { $0.origin == .demo })
         XCTAssertEqual(fit.label, "FIT file · Edge 540")
+    }
+}
+
+final class WorkoutIconTests: XCTestCase {
+    /// A walk used to show the dumbbell, because everything that isn't swim/bike/run shares
+    /// the `.other` bucket. Each activity now carries its own symbol.
+    func testWalksHikesAndGolfDontLookLikeLifting() {
+        let lifting = Sport.other.symbol
+        for t: HKWorkoutActivityType in [.walking, .hiking, .golf, .snowboarding, .yoga] {
+            XCTAssertNotEqual(TrendReader.symbol(for: t), lifting, "\(t.rawValue)")
+        }
+        XCTAssertEqual(TrendReader.symbol(for: .walking), "figure.walk")
+        XCTAssertEqual(TrendReader.symbol(for: .traditionalStrengthTraining), lifting)
+    }
+
+    func testFITWalksKeepTheirIconToo() {
+        let s = FITParser.Session(sport: 11, subSport: nil, start: .now, elapsed: 60)
+        XCTAssertEqual(FITParser.describe(s).symbol, "figure.walk")
+    }
+
+    func testIconFallsBackToTheSport() {
+        let w = WorkoutSummary(id: UUID(), sport: .run, name: "Run", start: .now, duration: 60, distanceMeters: nil, avgHR: nil)
+        XCTAssertEqual(w.icon, "figure.run")
     }
 }

@@ -184,17 +184,19 @@ enum FITParser {
 
     /// FIT sport → the app's sport and a name. Unknown sports are kept as "Workout" rather than
     /// dropped: the time still happened.
-    static func describe(_ s: Session) -> (sport: Sport, name: String) {
+    static func describe(_ s: Session) -> (sport: Sport, name: String, symbol: String) {
         switch s.sport {
-        case 1: return (.run, "Run")
-        case 2: return (.bike, s.subSport == 6 ? "Indoor ride" : "Ride")
-        case 5: return (.swim, "Swim")
-        case 4 where s.subSport == 6: return (.bike, "Indoor ride")       // fitness equipment, indoor cycling
-        case 10: return (.other, "Strength")
-        case 11: return (.other, "Walk")
-        case 17: return (.other, "Hike")
-        case 25: return (.other, "Golf")
-        default: return (.other, "Workout")
+        case 1: return (.run, "Run", "figure.run")
+        case 2: return (.bike, s.subSport == 6 ? "Indoor ride" : "Ride", s.subSport == 6 ? "figure.indoor.cycle" : "figure.outdoor.cycle")
+        case 5: return (.swim, "Swim", "figure.pool.swim")
+        case 4 where s.subSport == 6: return (.bike, "Indoor ride", "figure.indoor.cycle")   // fitness equipment, indoor cycling
+        case 10: return (.other, "Strength", "figure.strengthtraining.traditional")
+        case 11: return (.other, "Walk", "figure.walk")
+        case 13: return (.other, "Ski", "figure.skiing.downhill")
+        case 14: return (.other, "Snowboard", "figure.snowboarding")
+        case 17: return (.other, "Hike", "figure.hiking")
+        case 25: return (.other, "Golf", "figure.golf")
+        default: return (.other, "Workout", "figure.mixed.cardio")
         }
     }
 

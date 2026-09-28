@@ -24,7 +24,7 @@ struct FeelSheet: View {
             Form {
                 Section {
                     HStack(spacing: 10) {
-                        Image(systemName: workout.sport.symbol)
+                        Image(systemName: workout.icon)
                             .font(.title2).foregroundStyle(Palette.color(for: workout.sport))
                             .frame(width: 32)
                         VStack(alignment: .leading, spacing: 1) {

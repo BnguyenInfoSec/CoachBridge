@@ -41,6 +41,11 @@ struct WorkoutSummary: Identifiable, Hashable, Sendable {
     let avgHR: Double?
     /// Which source recorded it. Defaults to Apple Health, the only source before v2.9.
     var origin: Origin = .appleHealth
+    /// The activity's own symbol. `sport` is a coarse bucket for load charts, and walks, hikes,
+    /// golf and strength all fall into `.other` — whose dumbbell made a walk look like lifting.
+    var activitySymbol: String? = nil
+
+    var icon: String { activitySymbol ?? sport.symbol }
 }
 
 /// A rough, transparent recovery read from resting HR and HRV versus the athlete's own baseline.

@@ -242,7 +242,7 @@ struct WorkoutDetailView: View {
         return List {
             Section {
                 HStack(spacing: 12) {
-                    Image(systemName: summary.sport.symbol).font(.title2)
+                    Image(systemName: summary.icon).font(.title2)
                         .foregroundStyle(Palette.color(for: summary.sport)).frame(width: 36)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(summary.name).font(.title3.bold())

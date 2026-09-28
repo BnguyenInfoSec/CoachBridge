@@ -685,7 +685,7 @@ private struct RecentWorkoutsCard: View {
             }
             ForEach(workouts) { w in
                 HStack(spacing: 12) {
-                    Image(systemName: w.sport.symbol)
+                    Image(systemName: w.icon)
                         .frame(width: 28)
                         .foregroundStyle(Palette.color(for: w.sport))
                     VStack(alignment: .leading, spacing: 2) {

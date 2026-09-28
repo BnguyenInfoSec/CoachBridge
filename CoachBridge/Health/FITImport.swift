@@ -14,6 +14,8 @@ struct ImportedWorkout: Codable, Hashable, Identifiable, Sendable {
     var avgHR: Double?
     var avgPower: Int?
     var device: String?
+    /// Optional so files imported before v2.10 still decode.
+    var symbol: String?
     /// SHA-256 of the file it came from, so importing the same file twice does nothing.
     var fileDigest: String
     var importedAt: Date
@@ -21,7 +23,7 @@ struct ImportedWorkout: Codable, Hashable, Identifiable, Sendable {
     var summary: WorkoutSummary {
         WorkoutSummary(id: id, sport: sport, name: name, start: start, duration: duration,
                        distanceMeters: distanceMeters, avgHR: avgHR,
-                       origin: Origin(kind: .fitFile, name: device))
+                       origin: Origin(kind: .fitFile, name: device), activitySymbol: symbol)
     }
 
     /// Turns a parsed file into workouts. Ids are derived from the file and session, so the
@@ -29,11 +31,11 @@ struct ImportedWorkout: Codable, Hashable, Identifiable, Sendable {
     static func from(_ a: FITParser.Activity, digest: String, now: Date) -> [ImportedWorkout] {
         let device = a.product ?? FITParser.manufacturerName(a.manufacturer)
         return a.sessions.enumerated().map { i, s in
-            let (sport, name) = FITParser.describe(s)
+            let (sport, name, symbol) = FITParser.describe(s)
             return ImportedWorkout(id: stableID("fit:\(digest):\(i)"), sport: sport, name: name,
                                    start: s.start, duration: s.timer ?? s.elapsed, distanceMeters: s.distanceMeters,
                                    avgHR: s.avgHR.map(Double.init), avgPower: s.avgPower, device: device,
-                                   fileDigest: digest, importedAt: now)
+                                   symbol: symbol, fileDigest: digest, importedAt: now)
         }
     }
 

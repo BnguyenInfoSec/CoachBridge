@@ -111,7 +111,8 @@ final class TrendReader {
         let hr = w.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: bpm)
         return WorkoutSummary(id: w.uuid, sport: sport, name: Self.name(for: w.workoutActivityType),
                               start: w.startDate, duration: w.duration, distanceMeters: distance, avgHR: hr,
-                              origin: Origin(kind: .appleHealth, name: w.sourceRevision.source.name))
+                              origin: Origin(kind: .appleHealth, name: w.sourceRevision.source.name),
+                              activitySymbol: Self.symbol(for: w.workoutActivityType))
     }
 
     static func sport(for type: HKWorkoutActivityType) -> Sport {
@@ -120,6 +121,27 @@ final class TrendReader {
         case .cycling, .handCycling: return .bike
         case .running: return .run
         default: return .other
+        }
+    }
+
+    nonisolated static func symbol(for type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .swimming: return "figure.pool.swim"
+        case .cycling: return "figure.outdoor.cycle"
+        case .running: return "figure.run"
+        case .walking: return "figure.walk"
+        case .hiking: return "figure.hiking"
+        case .traditionalStrengthTraining, .functionalStrengthTraining: return "figure.strengthtraining.traditional"
+        case .pilates: return "figure.pilates"
+        case .yoga: return "figure.yoga"
+        case .tennis: return "figure.tennis"
+        case .coreTraining: return "figure.core.training"
+        case .swimBikeRun: return "figure.mixed.cardio"
+        case .highIntensityIntervalTraining: return "figure.highintensity.intervaltraining"
+        case .golf: return "figure.golf"
+        case .snowboarding: return "figure.snowboarding"
+        case .downhillSkiing: return "figure.skiing.downhill"
+        default: return "figure.mixed.cardio"
         }
     }
 
@@ -135,6 +157,8 @@ final class TrendReader {
         case .yoga: return "Yoga"
         case .tennis: return "Tennis"
         case .golf: return "Golf"
+        case .snowboarding: return "Snowboard"
+        case .downhillSkiing: return "Ski"
         case .coreTraining: return "Core"
         case .swimBikeRun: return "Multisport"
         case .highIntensityIntervalTraining: return "HIIT"
