@@ -146,7 +146,7 @@ Health data is sensitive. These are design constraints, and the code is built to
   recommendation, never a health number (tested).
 - **Export and delete.** Everything the app stored can be exported as JSON or deleted from the
   phone and Watch in one step (Settings → Your data). See the draft
-  [privacy policy](docs/PRIVACY.md).
+  [privacy policy](docs/coach-bridge-privacy-policy.md).
 - **No third-party analytics.** The only services contacted are Google Drive, your LLM provider
   and the weather service.
 
@@ -292,6 +292,6 @@ would need explicit consent flows for the LLM and Drive features.
 |---|---|
 | [`CHANGELOG.md`](CHANGELOG.md) | Development history: what changed in each version, and why |
 | [`docs/data-contract.md`](docs/data-contract.md) | The daily JSON export format (fixed; external consumers depend on it) |
-| [`docs/PRIVACY.md`](docs/PRIVACY.md) | Draft privacy policy, written from what the app actually does |
+| [`docs/coach-bridge-privacy-policy.md`](docs/coach-bridge-privacy-policy.md) | Draft privacy policy, written from what the app actually does |
 | [`AGENT-HANDOFF.md`](AGENT-HANDOFF.md) | In-depth architecture, invariants and project context for contributors |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed working rules for AI coding agents |

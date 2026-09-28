@@ -36,6 +36,8 @@ targets:
       - path: CoachBridge
       - path: Shared
       - path: SharedPhone
+      - path: docs/coach-bridge-privacy-policy.md   # shown in Settings → Privacy policy
+        buildPhase: resources
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn

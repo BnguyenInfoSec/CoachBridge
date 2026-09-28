@@ -231,7 +231,7 @@ Dashboard, chat, plan calendar, calendar sync and weather have all run on device
   and the quality of that note is the entire feature. Generate a few early and tune the prompt.
 
 ### Known open items
-- **Privacy policy** — drafted in `docs/PRIVACY.md` (v2.9); needs review and hosting before
+- **Privacy policy** — drafted in `docs/coach-bridge-privacy-policy.md` (v2.9); needs review and hosting before
   TestFlight external testing.
 - `AthleteProfile.startDate` falls back to `Date()` when `startDateISO` is empty, the one place
   `Model/` reads the clock.

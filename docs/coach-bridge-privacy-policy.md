@@ -1,7 +1,7 @@
 # Coach Bridge privacy policy
 
-*Draft, last updated 2026-09-25. It describes what version 2.9 of the app does and must be reviewed
-before it is published for TestFlight or App Store users. It is not legal advice.*
+*Draft, last updated 2026-09-28. It describes what version 2.11 of the app does and must be
+reviewed before it is published for TestFlight or App Store users. It is not legal advice.*
 
 Coach Bridge is a training app for iPhone and Apple Watch. It is built so that your data stays on
 your devices and goes only where you send it. There is no Coach Bridge server, no account, no
@@ -18,8 +18,10 @@ analytics and no advertising.
 - **FIT files you import** from a bike computer or watch. Only each session's totals are kept
   (sport, start time, duration, distance, average heart rate and power, device name). Routes, GPS
   positions and per-second records are never stored, and the file itself isn't kept.
-- **What you enter**: your training profile (including your bike, tires and running shoes, if you
-  add them), sessions, notes, how workouts felt, and photos you add of places you train.
+- **What you enter**: your training profile (including your bike, groupset, tires, tire pressures
+  and running shoes, if you add them), sessions, notes, how workouts felt, and photos you add of
+  places you train. If you type your weight for the tire-pressure calculator, it stays on your
+  iPhone and is never sent anywhere.
 
 ## Where it's stored
 
@@ -48,6 +50,15 @@ shares or licenses your data, and never sends health data anywhere not listed ab
 
 Demo mode fills the app with generated data. Generated data is never exported to Google Drive, and
 the coach is told it isn't real.
+
+## How it's protected
+
+- Anything you type, and anything that comes from outside the app (such as calendar event titles
+  written by whoever sent the invite), is cleaned and marked as data before it goes to your AI
+  provider, so it can't be used to give the AI instructions. This is tested automatically for
+  every text field.
+- Imported files are read defensively and only their totals are kept.
+- Web addresses you enter must be secure (https), and keys are checked before they're saved.
 
 ## Your control
 

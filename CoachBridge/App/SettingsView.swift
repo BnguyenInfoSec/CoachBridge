@@ -186,6 +186,11 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        PrivacyPolicyView()
+                    } label: {
+                        Label("Privacy policy", systemImage: "hand.raised")
+                    }
                     Button("Show the walkthrough again") { showOnboarding = true }
                     NavigationLink("Setup checks") { SetupCheckView() }
                 }

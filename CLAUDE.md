@@ -192,7 +192,7 @@ the prompt builders, and blocks the commit if either fails. Never bypass it with
 - The Watch app has only run in paired simulators. Feel answered on the Watch, complications on a
   face, and fuel notifications during a Workout session haven't been seen on a real watch.
 - FIT import is tested with generated files only; no real device file has been parsed yet.
-- `docs/PRIVACY.md` is a draft. It must match the code: if you change what leaves the phone,
+- `docs/coach-bridge-privacy-policy.md` is a draft. It must match the code: if you change what leaves the phone,
   change the policy in the same commit.
 
 ## 7. External constraints
