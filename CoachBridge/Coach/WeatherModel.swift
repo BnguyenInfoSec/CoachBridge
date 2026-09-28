@@ -13,6 +13,10 @@ final class WeatherModel: ObservableObject {
     @Published private(set) var forecast: Forecast?
     @Published private(set) var errorText: String?
     @Published private(set) var attribution: AppleWeather.Attribution?
+    /// Whether WeatherKit answers for this build, from the last forecast or check. Shown in
+    /// Settings because a missing portal switch looked exactly like "no forecast yet".
+    @Published private(set) var status: ServiceStatus = .unchecked
+    @Published private(set) var statusCheckedAt: Date?
     @Published var locationName: String { didSet { save() } }
     /// Nothing is fetched until the athlete says where they train. Without this the app used
     /// one person's city for everyone.
@@ -64,14 +68,44 @@ final class WeatherModel: ObservableObject {
         do {
             forecast = try await AppleWeather.forecast(latitude: latitude, longitude: longitude)
             errorText = nil
+            record(.working)
             if attribution == nil { attribution = try? await AppleWeather.attribution() }
             log.info("Forecast loaded: \(self.forecast?.days.count ?? 0, privacy: .public) days")
         } catch {
             errorText = AppleWeather.isSetupProblem(error)
                 ? "Apple Weather isn't enabled for this app yet. In the Apple Developer portal, turn on WeatherKit for the App ID under both Capabilities and App Services, then rebuild."
                 : "Weather unavailable: \(error.localizedDescription)"
+            record(ServiceStatus(error))
             log.error("Forecast failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    enum ServiceStatus: Equatable {
+        case unchecked, checking, working, notEnabled
+        case unavailable(String)
+
+        init(_ error: Error) {
+            self = AppleWeather.isSetupProblem(error) ? .notEnabled : .unavailable(error.localizedDescription)
+        }
+    }
+
+    private func record(_ s: ServiceStatus) {
+        status = s
+        statusCheckedAt = .now
+    }
+
+    /// Asks WeatherKit for one day at a fixed place (Apple Park), so the check works before a
+    /// training location is set and never sends the athlete's own position.
+    func checkService() async {
+        guard status != .checking else { return }
+        status = .checking
+        do {
+            try await AppleWeather.probe()
+            record(.working)
+        } catch {
+            record(ServiceStatus(error))
+        }
+        log.info("WeatherKit check: \(self.status == .working ? "working" : "failed", privacy: .public)")
     }
 
     private let locator = LocationProvider()

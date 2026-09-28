@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var chat: ChatModel
     @EnvironmentObject private var dashboard: DashboardModel
     @EnvironmentObject private var plan: PlanModel
+    @EnvironmentObject private var weather: WeatherModel
 
     @AppStorage(AppSettings.modelKey) private var model = AppSettings.defaultModel
     @AppStorage(AppSettings.profileKey) private var profile = AppSettings.defaultProfile
@@ -39,6 +40,45 @@ struct SettingsView: View {
     @State private var deleted = false
 
     private var provider: LLMProvider { LLMProvider(rawValue: providerRaw) ?? .anthropic }
+
+    private var weatherStatusText: String {
+        switch weather.status {
+        case .unchecked: return "Not checked"
+        case .checking: return "Checking\u{2026}"
+        case .working: return "Working"
+        case .notEnabled: return "Not enabled"
+        case .unavailable: return "Unavailable"
+        }
+    }
+
+    private var weatherStatusSymbol: String {
+        switch weather.status {
+        case .working: return "checkmark.circle.fill"
+        case .notEnabled: return "xmark.octagon.fill"
+        case .unavailable: return "exclamationmark.triangle.fill"
+        default: return "questionmark.circle"
+        }
+    }
+
+    private var weatherStatusColor: Color {
+        switch weather.status {
+        case .working: return .green
+        case .notEnabled: return .red
+        case .unavailable: return .orange
+        default: return .secondary
+        }
+    }
+
+    private var weatherFooter: String {
+        switch weather.status {
+        case .notEnabled:
+            return "Apple refused this build. In the Apple Developer portal, open Identifiers, choose the App ID above, turn on WeatherKit under both Capabilities and App Services, save, then run the app again. It can take about 30 minutes to start working."
+        case .unavailable(let reason):
+            return "WeatherKit is set up but didn't answer: \(reason) Usually the network; try again."
+        default:
+            return "Forecasts for the plan and the go/no-go come from Apple Weather. The check asks for one day at a fixed place, not your location."
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -153,6 +193,31 @@ struct SettingsView: View {
                     Text("Other devices")
                 } footer: {
                     Text("Bring in rides and runs from a Garmin, Wahoo, Hammerhead or other bike computer: import .fit files here, or open one in Coach Bridge from Files or the share sheet. Only each session's totals are kept — never the route — and a session that's also in Apple Health counts once.")
+                }
+
+                Section {
+                    // Built by hand: a Label inside LabeledContent made the row several hundred
+                    // points tall on iOS 27.
+                    HStack {
+                        Text("Status")
+                        Spacer()
+                        Group {
+                            Image(systemName: weatherStatusSymbol)
+                            Text(weatherStatusText)
+                        }
+                        .foregroundStyle(weatherStatusColor)
+                    }
+                    .accessibilityElement(children: .combine)
+                    if let at = weather.statusCheckedAt {
+                        LabeledContent("Last checked", value: at.formatted(date: .abbreviated, time: .shortened))
+                    }
+                    LabeledContent("App ID", value: Bundle.main.bundleIdentifier ?? "Unknown")
+                    Button("Check now") { Task { await weather.checkService() } }
+                        .disabled(weather.status == .checking)
+                } header: {
+                    Text("Apple Weather")
+                } footer: {
+                    Text(weatherFooter)
                 }
 
                 Section {

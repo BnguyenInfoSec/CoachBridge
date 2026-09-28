@@ -45,6 +45,15 @@ enum AppleWeather {
         return CoachBridge.Forecast(fetchedAt: now, timeZone: cal.timeZone, days: days, hours: hours)
     }
 
+    /// The cheapest request that proves the entitlement and App ID service work: one day's
+    /// forecast for a fixed place, never the athlete's location.
+    static func probe(now: Date = .now) async throws {
+        let applePark = CLLocation(latitude: 37.33, longitude: -122.01)
+        let start = Calendar.current.startOfDay(for: now)
+        _ = try await WeatherService.shared.weather(for: applePark,
+                                                    including: .daily(startDate: start, endDate: start.addingTimeInterval(86_400)))
+    }
+
     /// WeatherKit refuses a build that isn't entitled or whose App ID lacks the service. Worth
     /// telling apart from "no network", because only one of them is fixed in the developer portal.
     static func isSetupProblem(_ error: Error) -> Bool {

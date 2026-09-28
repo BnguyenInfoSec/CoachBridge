@@ -1,0 +1,625 @@
+{
+  "appVersion" : "2.11.0",
+  "exportedAt" : "2026-09-28T19:29:55Z",
+  "files" : {
+    "\/privatechats.json" : [
+      {
+        "createdAt" : "2026-09-23T21:08:23Z",
+        "id" : "766A10B7-58D3-437B-8D5E-9559AFFADCA5",
+        "messages" : [
+          {
+            "role" : "user",
+            "text" : "How has my fitness been overall, will I be ready for an Ironman next October?"
+          },
+          {
+            "role" : "assistant",
+            "text" : "**Fitness snapshot:**\n- Volume's been inconsistent — swinging from 2.4h to 13.1h weekly the past 6 weeks, no steady build yet. That's expected pre-plan, but there's not much of a fitness base to judge yet.\n- One solid brick week (Sep 13: 3.1mi swim\/bike\/run day) shows you can move, but it's a single data point.\n- Recovery signal today says **go easy** — resting HR 77 (way above your 22 bpm avg), HRV down 7%. Rest of this week, keep it light.\n\n**On timing:** Your plan currently targets a full (140.6) for **June 2027**, not October. If you're now thinking October 2027 instead, that gives you ~4 extra months — more runway, which helps, especially given the inconsistent volume so far.\n\n**Bottom line:** 13 months out is plenty of time *if* you build consistency from here — the plan ramps you from ~2.4h now to 13h\/wk at peak. The risk isn't the calendar, it's training gaps like you've had this summer. Nail the base phases and this is very doable.\n\nWant me to update the race date to October 2027, or keep June 2027 as the target?"
+          }
+        ],
+        "title" : "How has my fitness been overall, will I be read…",
+        "updatedAt" : "2026-09-23T21:08:23Z"
+      },
+      {
+        "createdAt" : "2026-09-24T03:40:45Z",
+        "id" : "5D116D99-D30C-42AD-A9AC-26BF865556F6",
+        "messages" : [
+          {
+            "role" : "user",
+            "text" : "How was the indoor ride?"
+          },
+          {
+            "role" : "assistant",
+            "text" : "I don't have any data on it yet — no completed workout or RPE feedback has come through for today's ride. Once it's logged (or if you want to tell me how it felt), I can factor that in.\n\nOne thing worth flagging: your recovery signal today is \"go easy\" — resting HR is up 17 bpm and HRV is down vs your 4-week averages. If the ride felt harder than usual for the effort, that's likely why."
+          },
+          {
+            "role" : "user",
+            "text" : "It’s on strava"
+          },
+          {
+            "role" : "assistant",
+            "text" : "Got it — but I only see data that comes through Apple Health, not Strava directly, so it hasn't shown up on my end yet. If Strava's synced to Health it may take a bit to appear.\n\nIn the meantime, want to just tell me how it felt (duration, effort\/RPE, HR if you noticed)? Especially useful today since your recovery signal is \"go easy\" — I'd want to know if it felt harder than the easy 25 min it was planned as."
+          }
+        ],
+        "title" : "How was the indoor ride?",
+        "updatedAt" : "2026-09-24T03:41:07Z"
+      }
+    ],
+    "\/privatecustom-sessions.json" : [
+      {
+        "createdAt" : "2026-09-23T20:40:19Z",
+        "date" : "2026-09-26",
+        "durationMin" : 50,
+        "id" : "E2274A4F-5B8B-4699-BD5B-A2DA57DA920A",
+        "kind" : "run",
+        "notes" : "3-5 miles no pace target just social run",
+        "startTime" : "07:00",
+        "title" : "Lake Murray with the guys"
+      },
+      {
+        "createdAt" : "2026-09-24T03:26:05Z",
+        "date" : "2026-09-23",
+        "durationMin" : 25,
+        "id" : "632A3797-D765-40DE-B596-6CD56E376210",
+        "kind" : "bike",
+        "notes" : "",
+        "startTime" : "20:10",
+        "title" : "Indoor trainer shakedown"
+      },
+      {
+        "createdAt" : "2026-09-25T00:00:57Z",
+        "date" : "2026-09-24",
+        "durationMin" : 45,
+        "id" : "2B6BB437-DE5A-40AA-915C-47AD8F6C6EC5",
+        "kind" : "lift",
+        "notes" : "Want big arms. Bis and tris",
+        "startTime" : "17:00",
+        "title" : "Pre class arm day"
+      },
+      {
+        "createdAt" : "2026-09-26T06:53:13Z",
+        "date" : "2026-09-25",
+        "durationMin" : 45,
+        "id" : "257CF93F-5D65-4D87-B7B2-83C27BFA4433",
+        "kind" : "flex",
+        "notes" : "",
+        "startTime" : "18:00",
+        "title" : "Active recovery golf with the guys"
+      }
+    ],
+    "\/privateplan-update.json" : {
+      "createdAt" : "2026-09-28T18:45:30Z",
+      "days" : {
+        "2026-09-28" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added an easy run to calendar (17:30-17:58); recovery signals are green so no change needed, plan's optional swim stays as bonus.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "run",
+              "rx" : {
+                "durationMin" : 28,
+                "fuelAfter" : "Normal meal",
+                "fuelBefore" : "Light snack if needed",
+                "fuelDuring" : "Water only",
+                "heartRate" : "Zone 1-2, nose-breathing pace",
+                "intensity" : "Easy aerobic, conversational",
+                "notes" : "Cushioned shoes. Athlete-added session, kept as scheduled."
+              },
+              "startTime" : "17:30",
+              "title" : "Easy run"
+            },
+            {
+              "detail" : "20 min, no numbers",
+              "kind" : "flex",
+              "rx" : {
+                "durationMin" : 20,
+                "fuelAfter" : "Normal meal",
+                "fuelBefore" : "Normal meal 2-3h before, or nothing if early",
+                "fuelDuring" : "Water",
+                "intensity" : "Easy aerobic, relaxed form",
+                "notes" : "Bonus session — skip without guilt if legs\/life say no."
+              },
+              "title" : "Optional easy swim"
+            }
+          ]
+        },
+        "2026-09-29" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added an easy ride to calendar (17:30-17:58); recovery week so keep it short and easy, plan's rest day sessions removed to avoid stacking.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "bike",
+              "rx" : {
+                "durationMin" : 28,
+                "fuelAfter" : "Normal meal; protein target 125-155g today",
+                "fuelBefore" : "Normal meal earlier",
+                "fuelDuring" : "Water",
+                "intensity" : "Easy spin, Zone 1-2",
+                "notes" : "Outdoor fine, light traffic hour.",
+                "power" : "FTP not tested — keep it conversational, low cadence effort"
+              },
+              "startTime" : "17:30",
+              "title" : "Easy ride"
+            }
+          ]
+        },
+        "2026-09-30" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added an easy run to calendar (17:30-17:58), replacing the optional easy bike flex session for the day.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "run",
+              "rx" : {
+                "durationMin" : 28,
+                "fuelAfter" : "Normal meal",
+                "fuelBefore" : "Normal meal 2-3h before",
+                "fuelDuring" : "Water",
+                "heartRate" : "Easy: full sentences, nose-breathing",
+                "intensity" : "Zone 2 — conversational",
+                "notes" : "Cushioned shoes for this easy effort.",
+                "pace" : "Whatever keeps HR easy, ~11:30-12:30\/mi"
+              },
+              "startTime" : "17:30",
+              "title" : "Easy run"
+            }
+          ]
+        },
+        "2026-10-01" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added a lift session to calendar (17:30-18:15); recovery week, keep it light.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "lift",
+              "rx" : {
+                "durationMin" : 45,
+                "fuelAfter" : "Normal meals; hit 125-155g protein today",
+                "intensity" : "Light — recovery week, moderate loads, good form, no grinding sets",
+                "notes" : "Full body, easy effort; this is a rest-phase week so keep RPE ≤5."
+              },
+              "startTime" : "17:30",
+              "title" : "Lift"
+            }
+          ]
+        },
+        "2026-10-02" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added an easy run to calendar (17:30-18:00); Vegas trip starts today so this is the last structured session before travel rest.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "run",
+              "rx" : {
+                "durationMin" : 30,
+                "fuelAfter" : "Normal meal",
+                "fuelBefore" : "Normal meal 2-3h before",
+                "fuelDuring" : "Water",
+                "heartRate" : "Easy, full sentences",
+                "intensity" : "Zone 2 — conversational",
+                "notes" : "Cushioned shoes.",
+                "pace" : "~11:30-12:30\/mi, whatever keeps HR easy"
+              },
+              "startTime" : "17:30",
+              "title" : "Easy run"
+            }
+          ]
+        },
+        "2026-10-03" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added a short long-ride to calendar during Vegas trip (07:00-07:33); travel week stays light per rules, keeping this brief outdoor spin as scheduled and dropping the plan's off-day placeholder.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "bike",
+              "rx" : {
+                "durationMin" : 33,
+                "fuelAfter" : "Normal meal",
+                "fuelBefore" : "Light snack",
+                "fuelDuring" : "Water",
+                "intensity" : "Easy Zone 1-2 spin — travel\/recovery week, nothing hard",
+                "notes" : "Short and easy given travel; first-light start avoids Vegas heat.",
+                "power" : "Conversational effort, no FTP test needed"
+              },
+              "startTime" : "07:00",
+              "title" : "Long ride"
+            }
+          ]
+        },
+        "2026-10-04" : {
+          "changedSessions" : true,
+          "reason" : "Athlete added a lift session to calendar (07:00-07:45) during Vegas trip; keeping it light and brief per recovery-week rules, and scheduling around the 16:00 appointment.",
+          "sessions" : [
+            {
+              "detail" : "",
+              "kind" : "lift",
+              "rx" : {
+                "durationMin" : 45,
+                "fuelAfter" : "Normal meal; protein 125-155g today",
+                "intensity" : "Light — full body, easy effort, travel week",
+                "notes" : "Keep loads moderate; avoid soreness heading into next week."
+              },
+              "startTime" : "07:00",
+              "title" : "Lift"
+            }
+          ]
+        }
+      },
+      "model" : "claude-sonnet-5",
+      "todayCall" : "Green light for an easy day: RHR 48 (well below your 4-wk avg), HRV normal, TSB +6 (fresh). Just an optional 20-min easy swim on the books — do it or skip it, no guilt either way.",
+      "weekNote" : "Recovery-block week, but you've self-added a full slate of workouts (run\/bike\/lift) on your calendar — keeping all of them exactly as scheduled since this is a rest phase (0–2.4h\/wk) and none exceed easy\/short efforts."
+    },
+    "\/privateVenues\/venues.json" : [
+      {
+        "art" : "venue-bayshore-run",
+        "createdAt" : "1970-01-01T00:00:00Z",
+        "id" : "96E23D33-B2DD-4605-81C6-710CA3B3877E",
+        "name" : "Bayshore Bikeway",
+        "note" : "Flat, wind off the bay, no lights",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-imperial-beach",
+        "createdAt" : "1970-01-01T00:00:01Z",
+        "id" : "5DAFBD36-4530-468A-8F30-98D9887582FB",
+        "name" : "Imperial Beach oceanfront",
+        "note" : "Packed sand at low tide",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-silver-strand",
+        "createdAt" : "1970-01-01T00:00:02Z",
+        "id" : "CEE75130-9EE5-4EF3-BD60-08A62BDC0D00",
+        "name" : "Coronado \/ Silver Strand",
+        "note" : "Long, flat, exposed",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-trail-run",
+        "createdAt" : "1970-01-01T00:00:13Z",
+        "id" : "8E4EE3E8-5D8E-44EE-9E61-9252C53B611B",
+        "name" : "Trail miles",
+        "note" : "Dirt, shade, easy on the legs",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-golden-gate-park",
+        "createdAt" : "1970-01-01T00:00:14Z",
+        "id" : "E113335E-B300-4AFE-B206-5E6C2799827A",
+        "name" : "Golden Gate Park",
+        "note" : "Cypress, fog, forgiving paths",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-golden-gate-bridge",
+        "createdAt" : "1970-01-01T00:00:15Z",
+        "id" : "A38B4CF2-AFDD-4A65-AAF7-5DDAFE47767D",
+        "name" : "Golden Gate Bridge",
+        "note" : "Long run with a view, wind on the span",
+        "slot" : "run"
+      },
+      {
+        "art" : "venue-bayshore-ride",
+        "createdAt" : "1970-01-01T00:00:03Z",
+        "id" : "8524BC11-23BC-4E9B-B45F-1951D60E4CBC",
+        "name" : "Bayshore Bikeway loop",
+        "note" : "Traffic-free, good for steady watts",
+        "slot" : "bike"
+      },
+      {
+        "art" : "venue-silver-strand",
+        "createdAt" : "1970-01-01T00:00:04Z",
+        "id" : "77FE78C4-85EC-4603-BD2D-5C01184BAAE8",
+        "name" : "Silver Strand to Coronado",
+        "note" : "Flat and fast, headwind home",
+        "slot" : "bike"
+      },
+      {
+        "art" : "venue-otay-lakes",
+        "createdAt" : "1970-01-01T00:00:05Z",
+        "id" : "EDE1A7C0-4E95-4305-B901-1100F473E44B",
+        "name" : "Otay Lakes \/ Honey Springs",
+        "note" : "The climbing day",
+        "slot" : "bike"
+      },
+      {
+        "art" : "venue-mountain-road",
+        "createdAt" : "1970-01-01T00:00:16Z",
+        "id" : "8A8763BF-8FE9-4E00-B8FA-E6EFF90E44CC",
+        "name" : "Mountain road",
+        "note" : "Switchbacks, steady watts, pack a jacket",
+        "slot" : "bike"
+      },
+      {
+        "art" : "venue-sierra-pass",
+        "createdAt" : "1970-01-01T00:00:17Z",
+        "id" : "12CBCDCB-6399-4B50-9978-2233D761B9E6",
+        "name" : "Sierra pass",
+        "note" : "High and thin — ride it easier than it looks",
+        "slot" : "bike"
+      },
+      {
+        "art" : "venue-pain-cave",
+        "createdAt" : "1970-01-01T00:00:06Z",
+        "id" : "5CF1BD48-4900-482E-98F0-9F06E8914715",
+        "name" : "Pain cave",
+        "note" : "KICKR CORE 2, fan on, towel down",
+        "slot" : "bike.indoor"
+      },
+      {
+        "art" : "venue-pool",
+        "createdAt" : "1970-01-01T00:00:07Z",
+        "id" : "0155547A-C8A1-4200-91A8-E903BC43C5E2",
+        "name" : "SDSU Aztec Aquaplex",
+        "note" : "Long course, check lap times",
+        "slot" : "swim"
+      },
+      {
+        "art" : "venue-ventura-cove",
+        "createdAt" : "1970-01-01T00:00:08Z",
+        "id" : "1EC34B16-0167-45AE-AB1C-6BA76D9FF14D",
+        "name" : "Ventura Cove, Mission Bay",
+        "note" : "Flat open water, easy entry",
+        "slot" : "swim"
+      },
+      {
+        "art" : "venue-la-jolla",
+        "createdAt" : "1970-01-01T00:00:09Z",
+        "id" : "F08B776E-3216-4B81-9094-17E565E08478",
+        "name" : "La Jolla Cove",
+        "note" : "Open water with swell, buddy up",
+        "slot" : "swim"
+      },
+      {
+        "art" : "venue-open-water",
+        "createdAt" : "1970-01-01T00:00:18Z",
+        "id" : "D5EE4081-C5F4-41F6-909B-F52896085BC0",
+        "name" : "Open water",
+        "note" : "Sight every six strokes, swim the buoy line",
+        "slot" : "swim"
+      },
+      {
+        "art" : "venue-gym",
+        "createdAt" : "1970-01-01T00:00:10Z",
+        "id" : "B69F9547-4CD9-4F7C-9FD6-11B96BEFE6B0",
+        "name" : "Gym",
+        "note" : "Squat rack, bands, core mat",
+        "slot" : "lift"
+      },
+      {
+        "art" : "venue-mountain",
+        "createdAt" : "1970-01-01T00:00:11Z",
+        "id" : "0F171FF7-B538-4ED5-AADD-853768277E26",
+        "name" : "Mountain day",
+        "note" : "Snowboard weekend",
+        "slot" : "snow"
+      },
+      {
+        "art" : "venue-ski-resort",
+        "createdAt" : "1970-01-01T00:00:19Z",
+        "id" : "D75B853E-149F-4D35-8356-657A4CF377E6",
+        "name" : "Resort day",
+        "note" : "Groomers and chairlift laps",
+        "slot" : "snow"
+      },
+      {
+        "art" : "venue-alpine-lake",
+        "createdAt" : "1970-01-01T00:00:20Z",
+        "id" : "5B9379C3-7D7C-4EBC-AC8F-072811B00F27",
+        "name" : "Alpine lake",
+        "note" : "The drive-up view",
+        "slot" : "snow"
+      },
+      {
+        "art" : "venue-race-day",
+        "createdAt" : "1970-01-01T00:00:12Z",
+        "id" : "6851E1D4-4CE2-4B7B-94C1-509355381ED4",
+        "name" : "Race day",
+        "note" : "",
+        "slot" : "fun"
+      }
+    ],
+    "\/privateworkout-journal.json" : [
+      {
+        "dateISO" : "2026-09-24",
+        "feel" : {
+          "answeredAt" : "2026-09-25T21:12:17Z",
+          "mood" : "good",
+          "note" : "",
+          "rpe" : 5
+        },
+        "id" : "597515FD-1ACB-4F03-9C50-79B2CB6932CA",
+        "note" : {
+          "body" : "You did 30 min vs the planned 45 for arm day, with avg HR 112, max 155, and RPE 5\/10 (\"good\"). That max HR spike is worth noting for a bis\/tris session, but combined with a moderate RPE and no mention of anything alarming, it's likely just a brief effort spike rather than a concern.",
+          "createdAt" : "2026-09-25T21:12:22Z",
+          "headline" : "Shorter arm day, right call given the signals",
+          "model" : "claude-sonnet-5",
+          "towardGoal" : "You're just before the start of your Recovery block, which is about arriving rested — cutting this session short instead of grinding out the full 45 fits that intent well.",
+          "watchFor" : "Your morning signals (resting HR 47, 9 bpm below your 4-week avg of 56; HRV 12% below average) both said \"go easy\" — good that you trimmed the session rather than pushing through."
+        },
+        "sport" : "Strength & other"
+      },
+      {
+        "dateISO" : "2026-09-13",
+        "feel" : {
+          "answeredAt" : "2026-09-23T21:00:42Z",
+          "mood" : "good",
+          "note" : "",
+          "rpe" : 6
+        },
+        "id" : "568253E1-1C1C-4B1F-B642-913326976251",
+        "note" : {
+          "body" : "You swam 2682 yd in 42 min (avg HR 146, max 178) at RPE 6 — \"somewhat hard\" — on a day your resting HR was 77 bpm (22 above your 4-week average of 55) and HRV was 7% below average. Swimming plus an RPE 6 bike also logged today adds up to real volume on a morning your body was asking for easy.",
+          "createdAt" : "2026-09-23T21:07:04Z",
+          "headline" : "Added session, but your body flagged caution today",
+          "model" : "claude-sonnet-5",
+          "towardGoal" : "This is Recovery week — the whole point is arriving at Base 1 rested, not banking extra fatigue, so today's double session works against that goal even though nothing here was on the plan.",
+          "watchFor" : "Resting HR that elevated combined with two RPE 6 sessions in one day is worth noting — if tomorrow's numbers don't bounce back toward baseline, take the rest day rather than adding more."
+        },
+        "sport" : "Swim"
+      },
+      {
+        "dateISO" : "2026-09-13",
+        "feel" : {
+          "answeredAt" : "2026-09-23T21:00:11Z",
+          "mood" : "good",
+          "note" : "",
+          "rpe" : 6
+        },
+        "id" : "42761AB3-33F2-48D9-B02C-0F5CCB90017A",
+        "note" : {
+          "body" : "This 208-minute, 55.9-mile ride with avg HR 165 (max 185) is a massive jump from your last logged ride (39 min, 9.8 mi, avg HR 154 on Sep 5), and it wasn't on the plan — you added it. RPE 6 \"good\" is a reasonable subjective read, but avg HR 165 for that long is well into hard-effort territory, not the easy spin this block calls for.",
+          "createdAt" : "2026-09-23T21:07:28Z",
+          "headline" : "Big unplanned ride during a recovery week",
+          "model" : "claude-sonnet-5",
+          "towardGoal" : "The whole point of this recovery window is to arrive at Base 1 rested — a ride like this works against that, so treat it as a one-off, not a new normal.",
+          "watchFor" : "Your morning signals said go easy — resting HR was 77 (22 bpm above your 4-week average of 55) and HRV was 7% below average — and you still put in over 3 hours at a high average HR. That combo, plus this being your second RPE 6 session today (after the swim), is worth paying attention to; make sure tomorrow is genuinel…"
+        },
+        "sport" : "Bike"
+      }
+    ]
+  },
+  "format" : "coach-bridge-export",
+  "note" : "Everything Coach Bridge stored on this iPhone. Health data stays in Apple Health (export it from the Health app). API keys and sign-in tokens are never exported.",
+  "photosNotIncluded" : [
+
+  ],
+  "settings" : {
+    "athlete.profile" : {
+      "availableDays" : [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "avoidedSports" : [
+
+      ],
+      "blackouts" : [
+        {
+          "endISO" : "2026-11-01",
+          "id" : "0AC80F6F-B85F-4C13-B337-AD526589E27B",
+          "mode" : "off",
+          "startISO" : "2026-10-30",
+          "title" : "Holiday"
+        }
+      ],
+      "commitments" : [
+
+      ],
+      "currentWeeklyHours" : 4,
+      "equipment" : [
+        "gravelBike",
+        "trainer",
+        "powerMeter",
+        "cadenceSensor",
+        "pool",
+        "openWater",
+        "gpsWatch",
+        "gym",
+        "hrStrap"
+      ],
+      "eventDateISO" : "",
+      "eventKind" : "ironman",
+      "eventName" : "",
+      "events" : [
+
+      ],
+      "gear" : {
+        "bike" : "Cervelo Aspero",
+        "shoes" : [
+          {
+            "category" : "carbonRacer",
+            "id" : "35001291-C45F-45AD-BF25-6BB8F33EC3F7",
+            "model" : ""
+          },
+          {
+            "category" : "maxCushion",
+            "id" : "E89143F8-0A65-4310-953E-67976D814472",
+            "model" : ""
+          }
+        ],
+        "tires" : "PZero TLR RS 32x700",
+        "tireSetup" : "tubeless"
+      },
+      "goal" : "",
+      "liftsPerWeek" : 2,
+      "longDay" : 6,
+      "name" : "",
+      "notes" : "",
+      "preferredSports" : [
+
+      ],
+      "startDateISO" : "",
+      "work" : {
+        "endHour" : 17,
+        "startHour" : 9,
+        "weekdays" : [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    "calendar.lastWritten" : {
+      "2026-09-22#0" : 1790124300,
+      "2026-09-23#0" : 1790211600,
+      "2026-09-23#1" : 1790219400,
+      "2026-09-24#1" : 1790303400,
+      "2026-09-24#2" : 1790294400,
+      "2026-09-25#0" : 1790388000,
+      "2026-09-25#1" : 1790389500,
+      "2026-09-25#2" : 1790384400,
+      "2026-09-26#1" : 1790435100,
+      "2026-09-26#2" : 1790431200,
+      "2026-09-27#0" : 1790521200,
+      "2026-09-28#0" : 1790644500,
+      "2026-09-28#1" : 1790646780,
+      "2026-09-29#0" : 1790730900,
+      "2026-09-30#0" : 1790817300,
+      "2026-10-01#0" : 1790904600,
+      "2026-10-02#0" : 1790990100,
+      "2026-10-03#0" : 1791039000,
+      "2026-10-04#0" : 1791126000,
+      "2026-10-05#0" : 1791249300,
+      "2026-10-07#0" : 1791419400,
+      "2026-10-09#0" : 1791592200,
+      "2026-10-11#0" : 1791727200
+    },
+    "calendar.trainingID" : "2DC2D554-7D5C-4EFD-ABBB-E8B53A1DEF05",
+    "coach.model" : "claude-sonnet-5",
+    "coach.profile" : "",
+    "coach.projectURL" : "https:\/\/claude.ai",
+    "coach.provider" : "anthropic",
+    "demo.enabled" : false,
+    "export.lastAutoSuccess" : "2026-09-28T19:29:53Z",
+    "export.lastAutoSummary" : "2 updated · Health update",
+    "GID_AppHasRunBefore" : true,
+    "GID_MigrationCheckPerformed" : true,
+    "onboarding.completedVersion" : 3,
+    "plan.lastClaudeRequest" : "2026-09-28T18:45:30Z",
+    "plan.settings" : {
+      "classDays" : [
+
+      ],
+      "classUntil" : "",
+      "snowSaturdays" : [
+
+      ],
+      "venueByKind" : {
+        "bike" : "12CBCDCB-6399-4B50-9978-2233D761B9E6"
+      }
+    },
+    "weather.configured" : true,
+    "weather.lat" : 32.619999999999997,
+    "weather.lon" : -117.09,
+    "weather.name" : "Chula Vista"
+  },
+  "version" : 1
+}
