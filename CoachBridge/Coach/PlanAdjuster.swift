@@ -246,9 +246,12 @@ enum PlanAdjuster {
         dec.keyDecodingStrategy = .convertFromSnakeCase
         guard let out = try? dec.decode(Output.self, from: data) else { throw ParseError.unreadable }
 
+        // Model output is untrusted too (OWASP LLM05): it's shown, written to the calendar and
+        // Watch, and fed back into later prompts. One clean line, no hidden characters or tags.
         func clip(_ s: String?, _ n: Int) -> String? {
-            guard let s = s?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
-            return s.count > n ? String(s.prefix(n - 1)) + "…" : s
+            guard let s else { return nil }
+            let c = PromptSafety.inline(s, max: n - 1)
+            return c.isEmpty ? nil : c
         }
 
         var days: [String: PlanUpdate.DayChange] = [:]

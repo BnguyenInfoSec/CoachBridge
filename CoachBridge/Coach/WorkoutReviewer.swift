@@ -152,9 +152,10 @@ enum WorkoutReviewer {
             createdAt: now)
     }
 
+    /// Model output is untrusted (OWASP LLM05): cleaned of hidden characters and tag look-alikes
+    /// before it's shown or saved, and capped.
     private static func text(_ v: Any?, max: Int) -> String {
-        let s = (v as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return s.count <= max ? s : String(s.prefix(max)) + "…"
+        PromptSafety.clean(v as? String ?? "", max: max)
     }
 
     private static func optional(_ v: Any?, max: Int) -> String? {
