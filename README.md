@@ -20,6 +20,7 @@ read-only access, stored on your devices, exported only where you choose.
 - [Features](#features)
 - [Architecture](#architecture)
 - [Privacy and security](#privacy-and-security)
+- [Security engineering](#security-engineering)
 - [Getting started](#getting-started)
 - [Development](#development)
 - [Project status](#project-status)
@@ -151,6 +152,37 @@ Health data is sensitive. These are design constraints, and the code is built to
   and the weather service.
 
 Strava is deliberately not integrated: its API terms prohibit using API data with AI models.
+
+## Security engineering
+
+Coach Bridge is also a worked example of a secure development lifecycle for an app that handles
+health data and calls an LLM. The full design, with information-flow maps, trust boundaries, a
+STRIDE threat model, an OWASP Top 10 for LLM Applications mapping and NIST SSDF practices, is in
+[`docs/SECURITY.md`](docs/SECURITY.md).
+
+```mermaid
+flowchart LR
+    U["Untrusted text<br/>typed fields · calendar invites<br/>the model's own stored replies"] --> P["PromptSafety<br/>clean · fence · cap"]
+    P --> L(("LLM"))
+    L --> V["Validate output<br/>schema · window · limits · clean"]
+    V --> G{"Chat change?"}
+    G -- yes --> A["Athlete taps Apply"]
+    G -- "weekly update" --> R["Applied, rate-limited"]
+```
+
+Highlights:
+
+- **AI security.** Every text field is tested against 14 injection payloads, including forged
+  tags, fake conversation turns, bidi and zero-width hiding, Unicode tag smuggling, CR/LF and a
+  100k flood, in every prompt it can reach. A pre-commit hook blocks any commit that changes a
+  text field without passing the suite. Model output is treated as untrusted and validated
+  before it's shown, stored or re-used.
+- **Hostile-input parsing.** The FIT reader is fuzzed with 5,000 corrupted files and truncated at
+  every byte.
+- **Least privilege and minimisation.** Read-only Health, Drive access limited to the app's own
+  files, location rounded to about 1 km, nothing numeric on a locked screen, routes never stored.
+- **Verifiable.** Each claim in the security document names the test that proves it, and every
+  fix is its own commit with the reason in the message.
 
 ## Getting started
 
@@ -292,6 +324,7 @@ would need explicit consent flows for the LLM and Drive features.
 |---|---|
 | [`CHANGELOG.md`](CHANGELOG.md) | Development history: what changed in each version, and why |
 | [`docs/data-contract.md`](docs/data-contract.md) | The daily JSON export format (fixed; external consumers depend on it) |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Security design: information flow, threat model, OWASP LLM Top 10, NIST SSDF |
 | [`docs/coach-bridge-privacy-policy.md`](docs/coach-bridge-privacy-policy.md) | Draft privacy policy, written from what the app actually does |
 | [`AGENT-HANDOFF.md`](AGENT-HANDOFF.md) | In-depth architecture, invariants and project context for contributors |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed working rules for AI coding agents |
